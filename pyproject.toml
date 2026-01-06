@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     # MCP Framework
-    "fastmcp>=2.3.0",
+    "fastmcp>=2.14.0",
 
     # HTTP Client
     "httpx>=0.27.0",
