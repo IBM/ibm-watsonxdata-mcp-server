@@ -73,10 +73,8 @@ fakeredis==2.33.0
     # via pydocket
 fastmcp==2.14.2
     # via ibm-watsonxdata-mcp-server
-filelock==3.20.2
-    # via
-    #   ibm-watsonxdata-mcp-server
-    #   virtualenv
+filelock==3.20.3
+    # via virtualenv
 h11==0.16.0
     # via
     #   httpcore
@@ -336,17 +334,16 @@ typing-inspection==0.4.2
     #   mcp
     #   pydantic
     #   pydantic-settings
-urllib3==2.6.2
+urllib3==2.6.3
     # via
     #   ibm-cloud-sdk-core
-    #   ibm-watsonxdata-mcp-server
     #   requests
     #   types-requests
 uvicorn==0.38.0
     # via
     #   fastmcp
     #   mcp
-virtualenv==20.35.4
+virtualenv==20.36.1
     # via pre-commit
 websockets==15.0.1
     # via fastmcp

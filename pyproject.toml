@@ -57,10 +57,6 @@ dependencies = [
     "opentelemetry-sdk>=1.27.0",
     "opentelemetry-instrumentation-httpx>=0.48b0",
     "structlog>=24.0.0",
-
-    # Security fixes
-    "urllib3>=2.6.0",  # CVE-2025-66471 fix
-    "filelock>=3.20.1",  # CVE-2025-68146 fix (TOCTOU race condition)
 ]
 
 [project.optional-dependencies]
