@@ -451,7 +451,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(400, json={"error": "Syntax error in query"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await execute_select.fn(
                 mock_context,
                 sql="SELECT * FROM nonexistent_table",
@@ -459,6 +459,8 @@ class TestExecuteSelect:
                 schema_name="sales_db",
                 engine_id="presto-01",
             )
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_execute_select_engine_not_running(self, mock_context, watsonx_client, respx_mock):
@@ -467,7 +469,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(400, json={"error": "Engine presto-01 is not running"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await execute_select.fn(
                 mock_context,
                 sql="SELECT 1",
@@ -475,6 +477,8 @@ class TestExecuteSelect:
                 schema_name="sales_db",
                 engine_id="presto-01",
             )
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_execute_select_timeout(self, mock_context, watsonx_client, respx_mock):

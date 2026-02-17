@@ -16,7 +16,7 @@ class TestGetInstanceDetails:
     @pytest.mark.asyncio
     async def test_get_instance_details_success(self, mock_context, watsonx_client, respx_mock, mock_instance_response):
         """Test successful instance details retrieval."""
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(return_value=httpx.Response(200, json=mock_instance_response))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=mock_instance_response))
 
         result = await get_instance_details.fn(mock_context)
 
@@ -41,7 +41,7 @@ class TestGetInstanceDetails:
         # Response without deployment
         response = {"deploymentresponse": {}}
 
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
         result = await get_instance_details.fn(mock_context)
 
@@ -66,7 +66,7 @@ class TestGetInstanceDetails:
             }
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
         result = await get_instance_details.fn(mock_context)
 
@@ -82,27 +82,31 @@ class TestGetInstanceDetails:
     @pytest.mark.asyncio
     async def test_get_instance_details_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test instance details when API returns error."""
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(
             return_value=httpx.Response(500, json={"error": "Internal server error"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await get_instance_details.fn(mock_context)
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_instance_details_not_found(self, mock_context, watsonx_client, respx_mock):
         """Test instance details when instance not found."""
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(
             return_value=httpx.Response(404, json={"error": "Instance not found"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await get_instance_details.fn(mock_context)
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_instance_details_timeout(self, mock_context, watsonx_client, respx_mock):
         """Test instance details with timeout."""
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(side_effect=httpx.TimeoutException("Request timed out"))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(side_effect=httpx.TimeoutException("Request timed out"))
 
         with pytest.raises(httpx.TimeoutException):
             await get_instance_details.fn(mock_context)
@@ -110,7 +114,7 @@ class TestGetInstanceDetails:
     @pytest.mark.asyncio
     async def test_get_instance_details_empty_response(self, mock_context, watsonx_client, respx_mock):
         """Test instance details with empty response."""
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(return_value=httpx.Response(200, json={}))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json={}))
 
         result = await get_instance_details.fn(mock_context)
 
@@ -135,7 +139,7 @@ class TestGetInstanceDetails:
             }
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/instance").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
         result = await get_instance_details.fn(mock_context)
 

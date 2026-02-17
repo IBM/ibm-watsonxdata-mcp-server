@@ -23,10 +23,10 @@ class TestListEngines:
         mock_spark_engines_response,
     ):
         """Test listing all engines (Presto and Spark)."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
@@ -72,7 +72,7 @@ class TestListEngines:
         mock_presto_engines_response,
     ):
         """Test listing only Presto engines."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
 
@@ -96,7 +96,7 @@ class TestListEngines:
         mock_spark_engines_response,
     ):
         """Test listing only Spark engines."""
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
@@ -123,8 +123,8 @@ class TestListEngines:
     @pytest.mark.asyncio
     async def test_list_engines_empty_response(self, mock_context, watsonx_client, respx_mock):
         """Test listing engines when no engines exist."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines.fn(mock_context)
 
@@ -136,33 +136,37 @@ class TestListEngines:
     @pytest.mark.asyncio
     async def test_list_engines_presto_api_error(self, mock_context, watsonx_client, respx_mock, mock_spark_engines_response):
         """Test listing engines when Presto API fails."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(500, json={"error": "Internal error"})
         )
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await list_engines.fn(mock_context)
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_list_engines_spark_api_error(self, mock_context, watsonx_client, respx_mock, mock_presto_engines_response):
         """Test listing engines when Spark API fails."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(500, json={"error": "Internal error"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await list_engines.fn(mock_context)
+        
+        assert "API Error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_list_engines_timeout(self, mock_context, watsonx_client, respx_mock):
         """Test listing engines with timeout."""
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(side_effect=httpx.TimeoutException("Request timed out"))
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(side_effect=httpx.TimeoutException("Request timed out"))
 
         with pytest.raises(httpx.TimeoutException):
             await list_engines.fn(mock_context)
@@ -181,8 +185,8 @@ class TestListEngines:
             ]
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(return_value=httpx.Response(200, json=response))
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines.fn(mock_context)
 
@@ -194,8 +198,8 @@ class TestListEngines:
         """Test listing engines with alternative field names (name vs display_name)."""
         response = {"spark_engines": [{"id": "spark-alt", "name": "Alternative Spark", "status": "running"}]}
 
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json=response))
 
         result = await list_engines.fn(mock_context)
 
@@ -215,8 +219,8 @@ class TestListEngines:
             ]
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(return_value=httpx.Response(200, json=response))
-        respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines.fn(mock_context)
 
@@ -233,11 +237,11 @@ class TestListEngines:
         mock_spark_engines_response,
     ):
         """Test that API calls are made in parallel."""
-        presto_route = respx_mock.get("https://test.watsonx.com/api/v2/presto_engines").mock(
+        presto_route = respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
 
-        spark_route = respx_mock.get("https://test.watsonx.com/api/v2/spark_engines").mock(
+        spark_route = respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 

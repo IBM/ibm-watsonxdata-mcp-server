@@ -53,8 +53,8 @@ async def describe_table(
         engine_id=engine_id,
     )
 
-    # Build API path: /v2/catalogs/{catalog}/schemas/{schema}/tables/{table}?engine_id={engine_id}
-    path = f"/v2/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}?engine_id={engine_id}"
+    # Build API path: /v3/catalogs/{catalog}/schemas/{schema}/tables/{table}?engine_id={engine_id}
+    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}?engine_id={engine_id}"
 
     # Make API call
     response = await watsonx_client.get(path)
