@@ -66,7 +66,7 @@ Before installation, ensure you have:
 - **watsonx.data instance** ([Provision Instance](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_prov_lite_1)) and ([Setup](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_hp_intro))
 - **IBM Cloud API key** ([Create API Key](https://cloud.ibm.com/iam/apikeys))
 - Gather Instance details:
-  - Base URL (e.g., `https://your-instance.lakehouse.cloud.ibm.com`)
+  - Base URL (e.g., `https://us-south.lakehouse.cloud.ibm.com`)
   - Instance CRN (e.g., `crn:v1:bluemix:public:lakehouse:us-south:a/...`)
   - IAM API Key with access to watsonx.data instance, catalog and engines
 
@@ -176,7 +176,9 @@ Then use the full path in your config:
 #### Integration with IBM Bob
 
 Find your mcp_settings.json configuration file:
-`~/Library/Application Support/Bob-IDE/User/globalStorage/ibm.bob-code/settings/mcp_settings.json`
+`~/Library/Application Support/IBM Bob/User/globalStorage/ibm.bob-code/settings/mcp_settings.json`
+
+Different version will have different path. The exact path will be found in `Views and More Actions...` -> `MCP Servers` -> `Edit MCP`
 
 **Option 1: Using pip/pipx install**
 

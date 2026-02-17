@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-02-17
+
+### Added
+- Data ingestion tools for managing ingestion jobs:
+  - `create_ingestion_job` - Create new data ingestion jobs
+  - `get_ingestion_job` - Get details of a specific ingestion job
+  - `list_ingestion_jobs` - List all ingestion jobs
+  - `delete_ingestion_job` - Delete an ingestion job
+- Schema creation tool:
+  - `create_schema` - Create new schemas in catalogs
+
+### Changed
+- Migrated API endpoints from v2 to v3:
+  - Catalog endpoints (list_schemas, list_tables, describe_table)
+  - Engine endpoints (list_engines)
+  - Platform endpoints (get_instance_details)
+- Enhanced error handling in HTTP client with detailed error messages
+
 ## [0.1.0] - 2025-12-08
 
 ### Added

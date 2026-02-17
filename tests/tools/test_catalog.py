@@ -9,6 +9,7 @@ import pytest
 
 from lakehouse_mcp.tools.catalog.describe_table import describe_table
 from lakehouse_mcp.tools.catalog.list_schemas import list_schemas
+from lakehouse_mcp.tools.catalog.create_schema import create_schema
 from lakehouse_mcp.tools.catalog.list_tables import list_tables
 
 
@@ -20,7 +21,7 @@ class TestListSchemas:
         """Test listing schemas from a catalog."""
         mock_response = {"schemas": ["default", "analytics", "reporting"]}
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -45,7 +46,7 @@ class TestListSchemas:
         """Test listing schemas from tpch catalog."""
         mock_response = {"schemas": ["sf1", "sf10", "sf100"]}
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/tpch/schemas?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/tpch/schemas?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -58,7 +59,7 @@ class TestListSchemas:
     @pytest.mark.asyncio
     async def test_list_schemas_empty_response(self, mock_context, watsonx_client, respx_mock):
         """Test listing schemas with empty response."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/empty_catalog/schemas?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/empty_catalog/schemas?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json={"schemas": []})
         )
 
@@ -74,7 +75,7 @@ class TestListTables:
     @pytest.mark.asyncio
     async def test_list_tables_success(self, mock_context, watsonx_client, respx_mock, mock_tables_response):
         """Test successful table listing."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_tables_response)
         )
 
@@ -102,7 +103,7 @@ class TestListTables:
         """Test listing tables with specific engine."""
         mock_response = {"tables": []}
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-02").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-02").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -118,7 +119,7 @@ class TestListTables:
     @pytest.mark.asyncio
     async def test_list_tables_empty_schema(self, mock_context, watsonx_client, respx_mock):
         """Test listing tables from empty schema."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/empty_schema/tables?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/empty_schema/tables?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json={"tables": []})
         )
 
@@ -149,7 +150,7 @@ class TestListTables:
             ]
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -181,7 +182,7 @@ class TestListTables:
             ]
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/test/schemas/test/tables?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -201,17 +202,19 @@ class TestListTables:
     @pytest.mark.asyncio
     async def test_list_tables_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test listing tables with API error."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/invalid/schemas/invalid/tables?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/invalid/schemas/invalid/tables?engine_id=presto-01").mock(
             return_value=httpx.Response(404, json={"error": "Schema not found"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await list_tables.fn(
                 mock_context,
                 catalog_name="invalid",
                 schema_name="invalid",
                 engine_id="presto-01",
             )
+        
+        assert "Schema not found" in str(exc_info.value)
 
 
 class TestDescribeTable:
@@ -220,7 +223,7 @@ class TestDescribeTable:
     @pytest.mark.asyncio
     async def test_describe_table_success(self, mock_context, watsonx_client, respx_mock, mock_describe_table_response):
         """Test successful table description."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_describe_table_response)
         )
 
@@ -244,7 +247,7 @@ class TestDescribeTable:
     @pytest.mark.asyncio
     async def test_describe_table_columns(self, mock_context, watsonx_client, respx_mock, mock_describe_table_response):
         """Test that column details are properly extracted."""
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_describe_table_response)
         )
 
@@ -282,7 +285,7 @@ class TestDescribeTable:
             "properties": {},
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables/test?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/test?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -311,7 +314,7 @@ class TestDescribeTable:
             "last_modified": "2024-01-20T15:30:00Z",
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables/products?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/products?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -350,7 +353,7 @@ class TestDescribeTable:
             }
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -379,10 +382,10 @@ class TestDescribeTable:
     async def test_describe_table_not_found(self, mock_context, watsonx_client, respx_mock):
         """Test describing non-existent table."""
         respx_mock.get(
-            "https://test.watsonx.com/api/v2/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
         ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
 
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(RuntimeError) as exc_info:
             await describe_table.fn(
                 mock_context,
                 catalog_name="iceberg_data",
@@ -390,6 +393,8 @@ class TestDescribeTable:
                 table_name="nonexistent",
                 engine_id="presto-01",
             )
+        
+        assert "Table not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_describe_table_no_partitions(self, mock_context, watsonx_client, respx_mock):
@@ -402,7 +407,7 @@ class TestDescribeTable:
             "properties": {},
         }
 
-        respx_mock.get("https://test.watsonx.com/api/v2/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
+        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -416,3 +421,113 @@ class TestDescribeTable:
 
         assert result["partitions"] == []
         assert result["primary_keys"] == ["id"]
+
+
+class TestCreateSchema:
+    """Tests for create_schema tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_schema_basic(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a basic schema."""
+        mock_response = {
+            "name": "new_schema",
+            "catalog_name": "iceberg_data",
+            "custom_path": "",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await create_schema.fn(
+            mock_context,
+            catalog_id="iceberg_data",
+            schema_name="new_schema",
+            engine_id="presto-01",
+        )
+
+        assert result["name"] == "new_schema"
+        assert result["catalog_name"] == "iceberg_data"
+
+    @pytest.mark.asyncio
+    async def test_create_schema_with_custom_path(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a schema with custom path."""
+        mock_response = {
+            "name": "custom_schema",
+            "catalog_name": "iceberg_data",
+            "custom_path": "/data/schemas/custom",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await create_schema.fn(
+            mock_context,
+            catalog_id="iceberg_data",
+            schema_name="custom_schema",
+            engine_id="presto-01",
+            custom_path="/data/schemas/custom",
+        )
+
+        assert result["name"] == "custom_schema"
+        assert result["custom_path"] == "/data/schemas/custom"
+
+    @pytest.mark.asyncio
+    async def test_create_schema_with_storage(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a schema with storage name."""
+        mock_response = {
+            "name": "storage_schema",
+            "catalog_name": "iceberg_data",
+            "custom_path": "",
+            "storage_name": "my-bucket",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await create_schema.fn(
+            mock_context,
+            catalog_id="iceberg_data",
+            schema_name="storage_schema",
+            engine_id="presto-01",
+            storage_name="my-bucket",
+        )
+
+        assert result["name"] == "storage_schema"
+        assert result["storage_name"] == "my-bucket"
+
+    @pytest.mark.asyncio
+    async def test_create_schema_already_exists(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a schema that already exists."""
+        respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
+            return_value=httpx.Response(409, json={"error": "Schema already exists"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await create_schema.fn(
+                mock_context,
+                catalog_id="iceberg_data",
+                schema_name="existing_schema",
+                engine_id="presto-01",
+            )
+        
+        assert "Schema already exists" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_create_schema_invalid_catalog(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a schema in non-existent catalog."""
+        respx_mock.post("https://test.watsonx.com/api/v3/catalogs/invalid_catalog/schemas?engine_id=presto-01").mock(
+            return_value=httpx.Response(404, json={"error": "Catalog not found"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await create_schema.fn(
+                mock_context,
+                catalog_id="invalid_catalog",
+                schema_name="new_schema",
+                engine_id="presto-01",
+            )
+        
+        assert "Catalog not found" in str(exc_info.value)

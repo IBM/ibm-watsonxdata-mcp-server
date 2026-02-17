@@ -36,7 +36,7 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
     logger.info("getting_instance_details")
 
     # Make API call to get instance details
-    response = await watsonx_client.get("/v2/instance")
+    response = await watsonx_client.get("/v3/instance")
 
     # Handle None response
     response = response or {}

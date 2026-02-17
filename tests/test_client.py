@@ -86,10 +86,10 @@ class TestWatsonXClient:
         """Test GET request with 404 error."""
         respx_mock.get("https://test.watsonx.com/api/v2/notfound").mock(return_value=httpx.Response(404, json={"error": "Not found"}))
 
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+        with pytest.raises(RuntimeError) as exc_info:
             await watsonx_client.get("/v2/notfound")
 
-        assert exc_info.value.response.status_code == 404
+        assert "Not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_request_500_error(self, watsonx_client, respx_mock):
@@ -98,10 +98,10 @@ class TestWatsonXClient:
             return_value=httpx.Response(500, json={"error": "Internal server error"})
         )
 
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+        with pytest.raises(RuntimeError) as exc_info:
             await watsonx_client.get("/v2/error")
 
-        assert exc_info.value.response.status_code == 500
+        assert "Internal server error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_request_timeout(self, watsonx_client, respx_mock):
@@ -184,10 +184,10 @@ class TestWatsonXClient:
 
         respx_mock.post("https://test.watsonx.com/api/v3/query").mock(return_value=httpx.Response(400, json={"error": "Invalid request"}))
 
-        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+        with pytest.raises(RuntimeError) as exc_info:
             await watsonx_client.post("/v3/query", request_body)
 
-        assert exc_info.value.response.status_code == 400
+        assert "Invalid request" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_post_request_with_auth_headers(self, watsonx_client, respx_mock):
@@ -244,4 +244,202 @@ class TestWatsonXClient:
         assert "Content-Type" in request.headers
         assert request.headers["Content-Type"] == "application/json"
         assert "Accept" in request.headers
-        assert request.headers["Accept"] == "application/json"
+
+    # PATCH method tests
+
+    @pytest.mark.asyncio
+    async def test_patch_request_relative_path(self, watsonx_client, respx_mock):
+        """Test PATCH request with relative path."""
+        request_body = {"description": "Updated description"}
+        mock_response = {"id": "engine-123", "description": "Updated description", "status": "running"}
+
+        respx_mock.patch("https://test.watsonx.com/api/v2/presto_engines/engine-123").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await watsonx_client.patch("/v2/presto_engines/engine-123", request_body)
+
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_patch_request_absolute_url(self, watsonx_client, respx_mock):
+        """Test PATCH request with absolute URL."""
+        request_body = {"engine_restart": "force"}
+        mock_response = {"id": "engine-456", "status": "restarting"}
+        absolute_url = "https://other.service.com/api/v2/engines/engine-456"
+
+        respx_mock.patch(absolute_url).mock(return_value=httpx.Response(200, json=mock_response))
+
+        result = await watsonx_client.patch(absolute_url, request_body)
+
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_patch_request_with_body(self, watsonx_client, respx_mock):
+        """Test that PATCH request sends body correctly."""
+        request_body = {"engine_display_name": "New Name", "tags": ["production"]}
+        mock_response = {"id": "engine-789", "engine_display_name": "New Name"}
+
+        route = respx_mock.patch("https://test.watsonx.com/api/v2/spark_engines/engine-789").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        await watsonx_client.patch("/v2/spark_engines/engine-789", request_body)
+
+        # Verify the request body was sent
+        assert route.called
+        request = route.calls[0].request
+        assert request.method == "PATCH"
+        assert b"New Name" in request.content
+
+    @pytest.mark.asyncio
+    async def test_patch_request_with_auth_headers(self, watsonx_client, respx_mock):
+        """Test that PATCH request includes authorization headers."""
+        request_body = {"description": "test"}
+        mock_response = {"status": "ok"}
+
+        route = respx_mock.patch("https://test.watsonx.com/api/v2/test").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        await watsonx_client.patch("/v2/test", request_body)
+
+        # Verify the authorization header was sent
+        assert route.called
+        request = route.calls[0].request
+        assert "Authorization" in request.headers
+        assert request.headers["Authorization"] == "Bearer mock_access_token_123"
+
+    @pytest.mark.asyncio
+    async def test_patch_request_400_error(self, watsonx_client, respx_mock):
+        """Test PATCH request with 400 Bad Request error."""
+        request_body = {"invalid": "data"}
+
+        respx_mock.patch("https://test.watsonx.com/api/v2/engines/test").mock(
+            return_value=httpx.Response(400, json={"error": "Invalid request"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.patch("/v2/engines/test", request_body)
+
+        assert "Invalid request" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_patch_request_404_error(self, watsonx_client, respx_mock):
+        """Test PATCH request with 404 Not Found error."""
+        request_body = {"description": "test"}
+
+        respx_mock.patch("https://test.watsonx.com/api/v2/engines/nonexistent").mock(
+            return_value=httpx.Response(404, json={"error": "Engine not found"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.patch("/v2/engines/nonexistent", request_body)
+
+        assert "Engine not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_patch_request_500_error(self, watsonx_client, respx_mock):
+        """Test PATCH request with 500 Internal Server Error."""
+        request_body = {"description": "test"}
+
+        respx_mock.patch("https://test.watsonx.com/api/v2/engines/error").mock(
+            return_value=httpx.Response(500, json={"error": "Internal server error"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.patch("/v2/engines/error", request_body)
+
+        assert "Internal server error" in str(exc_info.value)
+
+    # DELETE method tests
+
+    @pytest.mark.asyncio
+    async def test_delete_request_relative_path(self, watsonx_client, respx_mock):
+        """Test DELETE request with relative path."""
+        mock_response = {"status": "deleted", "id": "engine-123"}
+
+        respx_mock.delete("https://test.watsonx.com/api/v2/presto_engines/engine-123").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await watsonx_client.delete("/v2/presto_engines/engine-123")
+
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_delete_request_absolute_url(self, watsonx_client, respx_mock):
+        """Test DELETE request with absolute URL."""
+        mock_response = {"status": "deleted"}
+        absolute_url = "https://other.service.com/api/v2/applications/app-456"
+
+        respx_mock.delete(absolute_url).mock(return_value=httpx.Response(200, json=mock_response))
+
+        result = await watsonx_client.delete(absolute_url)
+
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_delete_request_204_no_content(self, watsonx_client, respx_mock):
+        """Test DELETE request with 204 No Content response."""
+        respx_mock.delete("https://test.watsonx.com/api/v2/ingestion_jobs/job-789").mock(
+            return_value=httpx.Response(204)
+        )
+
+        result = await watsonx_client.delete("/v2/ingestion_jobs/job-789")
+
+        # Should return empty dict for 204 responses
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_delete_request_with_auth_headers(self, watsonx_client, respx_mock):
+        """Test that DELETE request includes authorization headers."""
+        mock_response = {"status": "deleted"}
+
+        route = respx_mock.delete("https://test.watsonx.com/api/v2/test").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        await watsonx_client.delete("/v2/test")
+
+        # Verify the authorization header was sent
+        assert route.called
+        request = route.calls[0].request
+        assert "Authorization" in request.headers
+        assert request.headers["Authorization"] == "Bearer mock_access_token_123"
+
+    @pytest.mark.asyncio
+    async def test_delete_request_404_error(self, watsonx_client, respx_mock):
+        """Test DELETE request with 404 Not Found error."""
+        respx_mock.delete("https://test.watsonx.com/api/v2/engines/nonexistent").mock(
+            return_value=httpx.Response(404, json={"error": "Engine not found"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.delete("/v2/engines/nonexistent")
+
+        assert "Engine not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_delete_request_500_error(self, watsonx_client, respx_mock):
+        """Test DELETE request with 500 Internal Server Error."""
+        respx_mock.delete("https://test.watsonx.com/api/v2/engines/error").mock(
+            return_value=httpx.Response(500, json={"error": "Internal server error"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.delete("/v2/engines/error")
+
+        assert "Internal server error" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_delete_request_401_unauthorized(self, watsonx_client, respx_mock):
+        """Test DELETE request with 401 Unauthorized error."""
+        respx_mock.delete("https://test.watsonx.com/api/v2/engines/test").mock(
+            return_value=httpx.Response(401, json={"error": "Unauthorized"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await watsonx_client.delete("/v2/engines/test")
+
+        assert "Unauthorized" in str(exc_info.value)

@@ -45,12 +45,12 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
     # Make parallel API calls
     tasks = []
     if should_fetch_presto:
-        tasks.append(watsonx_client.get("/v2/presto_engines"))
+        tasks.append(watsonx_client.get("/v3/presto_engines"))
     else:
         tasks.append(asyncio.sleep(0, result={"presto_engines": []}))
 
     if should_fetch_spark:
-        tasks.append(watsonx_client.get("/v2/spark_engines"))
+        tasks.append(watsonx_client.get("/v3/spark_engines"))
     else:
         tasks.append(asyncio.sleep(0, result={"spark_engines": []}))
 

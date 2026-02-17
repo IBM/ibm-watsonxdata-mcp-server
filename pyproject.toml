@@ -1,6 +1,6 @@
 [project]
 name = "ibm-watsonxdata-mcp-server"
-version = "0.1.0"
+version = "0.1.1"
 description = "Model Context Protocol (MCP) server for IBM watsonx.data - enables AI assistants to query and explore lakehouse data"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -40,27 +40,21 @@ classifiers = [
 ]
 dependencies = [
     # MCP Framework
-    "fastmcp>=2.3.0",
-
+    "fastmcp>=2.14.0",
     # HTTP Client
     "httpx>=0.27.0",
-
     # Authentication
     "ibm-cloud-sdk-core>=3.20.0",
-
     # Configuration
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-
     # Observability
     "opentelemetry-api>=1.27.0",
     "opentelemetry-sdk>=1.27.0",
     "opentelemetry-instrumentation-httpx>=0.48b0",
     "structlog>=24.0.0",
-
-    # Security fixes
-    "urllib3>=2.6.0",  # CVE-2025-66471 fix
-    "filelock>=3.20.1",  # CVE-2025-68146 fix (TOCTOU race condition)
+    "authlib>=1.6.6",
+    "cryptography>=46.0.5",
 ]
 
 [project.optional-dependencies]
