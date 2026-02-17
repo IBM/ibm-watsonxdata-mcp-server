@@ -216,7 +216,9 @@ Error: WATSONX_DATA_BASE_URL is required
 env | grep WATSONX
 
 # Required format:
-WATSONX_DATA_BASE_URL=https://region.lakehouse.cloud.ibm.com  # No trailing slash!
+WATSONX_DATA_BASE_URL=https://region.lakehouse.cloud.ibm.com/lakehouse/api  # Must include /lakehouse/api
+# To obtain: Copy hostname from browser when accessing instance, then append /lakehouse/api
+# Or check instance details → Data Access Service (DAS) endpoint
 WATSONX_DATA_API_KEY=your_ibm_cloud_api_key  # IBM Cloud API key
 WATSONX_DATA_INSTANCE_ID=crn:v1:bluemix:public:lakehouse:...  # Full CRN
 
@@ -224,7 +226,8 @@ WATSONX_DATA_INSTANCE_ID=crn:v1:bluemix:public:lakehouse:...  # Full CRN
 cat .env
 
 # Common mistakes:
-# ❌ WATSONX_DATA_BASE_URL=https://.../ (trailing slash)
+# ❌ WATSONX_DATA_BASE_URL=https://region.lakehouse.cloud.ibm.com (missing /lakehouse/api)
+# ❌ WATSONX_DATA_BASE_URL=https://.../lakehouse/api/ (trailing slash)
 # ❌ WATSONX_DATA_INSTANCE_ID=shortened-id (not full CRN)
 # ❌ Using quotes incorrectly: VAR="value" should be VAR=value
 ```
@@ -316,7 +319,7 @@ tail -f ~/Library/Logs/Claude/mcp*.log
         "ibm-watsonxdata-mcp-server"
       ],
       "env": {
-        "WATSONX_DATA_BASE_URL": "https://region.lakehouse.cloud.ibm.com",
+        "WATSONX_DATA_BASE_URL": "https://region.lakehouse.cloud.ibm.com/lakehouse/api",
         "WATSONX_DATA_API_KEY": "your_key",
         "WATSONX_DATA_INSTANCE_ID": "crn:..."
       }
@@ -569,8 +572,8 @@ Error: 404 Not Found - Resource not found
 ```bash
 # Check base URL format
 echo $WATSONX_DATA_BASE_URL
-# Should be: https://region.lakehouse.cloud.ibm.com
-# NO /api, NO /v2, NO trailing slash
+# Should be: https://region.lakehouse.cloud.ibm.com/lakehouse/api
+# Must include /lakehouse/api, NO trailing slash
 
 # Check instance ID format
 echo $WATSONX_DATA_INSTANCE_ID
@@ -582,9 +585,9 @@ echo $WATSONX_DATA_INSTANCE_ID
 
 1. **Fix Base URL:**
    ```bash
-   # Correct formats by region:
-   # us-south:  https://us-south.lakehouse.cloud.ibm.com
-   # us-east:   https://us-east.lakehouse.cloud.ibm.com
+   # Correct formats by region (must include /lakehouse/api):
+   # us-south:  https://us-south.lakehouse.cloud.ibm.com/lakehouse/api
+   # us-east:   https://us-east.lakehouse.cloud.ibm.com/lakehouse/api
    # eu-de:     https://eu-de.lakehouse.cloud.ibm.com
    # eu-gb:     https://eu-gb.lakehouse.cloud.ibm.com
 

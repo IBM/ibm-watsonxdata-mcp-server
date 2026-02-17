@@ -66,9 +66,12 @@ Before installation, ensure you have:
 - **watsonx.data instance** ([Provision Instance](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_prov_lite_1)) and ([Setup](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_hp_intro))
 - **IBM Cloud API key** ([Create API Key](https://cloud.ibm.com/iam/apikeys))
 - Gather Instance details:
-  - Base URL (e.g., `https://us-south.lakehouse.cloud.ibm.com`)
-  - Instance CRN (e.g., `crn:v1:bluemix:public:lakehouse:us-south:a/...`)
-  - IAM API Key with access to watsonx.data instance, catalog and engines
+  - **Base URL**: Obtain from your watsonx.data instance:
+    - Option 1: Copy the hostname from your browser's address bar when accessing the instance, then append `/lakehouse/api`
+    - Option 2: Navigate to instance details → **Data Access Service (DAS) endpoint**
+    - Example format: `https://us-south.lakehouse.cloud.ibm.com/lakehouse/api`
+  - **Instance CRN** (e.g., `crn:v1:bluemix:public:lakehouse:us-south:a/...`)
+  - **IAM API Key** with access to watsonx.data instance, catalog and engines
 
 ### 2. Installation
 
@@ -98,7 +101,7 @@ uv sync
 cp examples/.env.example .env
 
 # Edit with your credentials
-export WATSONX_DATA_BASE_URL=https://your-instance.lakehouse.cloud.ibm.com
+export WATSONX_DATA_BASE_URL=https://us-south.lakehouse.cloud.ibm.com/lakehouse/api
 export WATSONX_DATA_API_KEY=your_ibm_cloud_api_key_here
 export WATSONX_DATA_INSTANCE_ID=crn:v1:bluemix:public:lakehouse:us-south:a/...
 
@@ -142,7 +145,7 @@ Then use the full path in your config:
       "command": "/path/from/which/command/ibm-watsonxdata-mcp-server",
       "args": ["--transport", "stdio"],
       "env": {
-        "WATSONX_DATA_BASE_URL": "https://your-instance.lakehouse.cloud.ibm.com/lakehouse/api",
+        "WATSONX_DATA_BASE_URL": "https://us-south.lakehouse.cloud.ibm.com/lakehouse/api",
         "WATSONX_DATA_API_KEY": "your_api_key_here",
         "WATSONX_DATA_INSTANCE_ID": "crn:v1:bluemix:public:lakehouse:us-south:a/..."
       }
@@ -164,7 +167,7 @@ Then use the full path in your config:
         "ibm-watsonxdata-mcp-server"
       ],
       "env": {
-        "WATSONX_DATA_BASE_URL": "https://your-instance.lakehouse.cloud.ibm.com/lakehouse/api",
+        "WATSONX_DATA_BASE_URL": "https://us-south.lakehouse.cloud.ibm.com/lakehouse/api",
         "WATSONX_DATA_API_KEY": "your_api_key_here",
         "WATSONX_DATA_INSTANCE_ID": "crn:v1:bluemix:public:lakehouse:us-south:a/..."
       }
@@ -195,7 +198,7 @@ Then use that path in your config:
       "command": "/path/from/which/command/ibm-watsonxdata-mcp-server",
       "args": ["--transport", "stdio"],
       "env": {
-        "WATSONX_DATA_BASE_URL": "https://your-instance.lakehouse.cloud.ibm.com/lakehouse/api",
+        "WATSONX_DATA_BASE_URL": "https://us-south.lakehouse.cloud.ibm.com/lakehouse/api",
         "WATSONX_DATA_API_KEY": "your_api_key_here",
         "WATSONX_DATA_INSTANCE_ID": "crn:v1:bluemix:public:lakehouse:us-south:a/..."
       }
@@ -217,7 +220,7 @@ Then use that path in your config:
         "ibm-watsonxdata-mcp-server"
       ],
       "env": {
-        "WATSONX_DATA_BASE_URL": "https://your-instance.lakehouse.cloud.ibm.com/lakehouse/api",
+        "WATSONX_DATA_BASE_URL": "https://us-south.lakehouse.cloud.ibm.com/lakehouse/api",
         "WATSONX_DATA_API_KEY": "your_api_key_here",
         "WATSONX_DATA_INSTANCE_ID": "crn:v1:bluemix:public:lakehouse:us-south:a/..."
       }
@@ -392,7 +395,7 @@ See [TOOLS.md](TOOLS.md) for more usage patterns and advanced examples.
    ```bash
    cp examples/.env.example .env
    # Edit .env with your credentials
-   export WATSONX_DATA_BASE_URL=https://your-instance.lakehouse.cloud.ibm.com
+   export WATSONX_DATA_BASE_URL=https://us-south.lakehouse.cloud.ibm.com/lakehouse/api
    export WATSONX_DATA_API_KEY=your_ibm_cloud_api_key_here
    export WATSONX_DATA_INSTANCE_ID=crn:v1:bluemix:public:lakehouse:us-south:a/...
    ```
