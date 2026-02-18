@@ -1,6 +1,6 @@
 # Tool Reference
 
-Complete reference for all 6 read-only watsonx.data MCP tools.
+Complete reference for all watsonx.data MCP tools.
 
 ## Table of Contents
 
@@ -12,8 +12,14 @@ Complete reference for all 6 read-only watsonx.data MCP tools.
   - [list_schemas](#list_schemas)
   - [list_tables](#list_tables)
   - [describe_table](#describe_table)
+  - [create_schema](#create_schema)
 - [Query Tools](#query-tools)
   - [execute_select](#execute_select)
+- [Data Ingestion Tools](#data-ingestion-tools)
+  - [create_ingestion_job](#create_ingestion_job)
+  - [list_ingestion_jobs](#list_ingestion_jobs)
+  - [get_ingestion_job](#get_ingestion_job)
+  - [delete_ingestion_job](#delete_ingestion_job)
 - [Usage Patterns](#usage-patterns)
 - [Best Practices](#best-practices)
 
@@ -399,6 +405,82 @@ Table Properties:
 
 ---
 
+### create_schema
+
+Create a new schema in a watsonx.data catalog with optional storage configuration.
+
+**Category**: Catalog Management
+
+**Parameters**:
+- `catalog_id` (string, required): Catalog identifier (e.g., "iceberg_data")
+- `schema_name` (string, required): Name for the new schema
+- `engine_id` (string, required): Engine ID to use for the operation
+- `custom_path` (string, optional): Path within bucket where schema will be created
+- `storage_name` (string, optional): Storage/bucket name for the schema
+
+**Returns**:
+- `schema_name` (string): Name of the created schema
+- `catalog_name` (string): Parent catalog name
+- `custom_path` (string): Custom path if specified
+- `storage_name` (string): Storage name if specified
+
+**Example Usage:**
+
+**Natural language:**
+```
+Create a new schema called analytics_prod in the iceberg_data catalog
+```
+
+**Claude responds:**
+```
+Creating new schema...
+
+Schema Created Successfully:
+- Schema name: analytics_prod
+- Catalog: iceberg_data
+- Engine used: presto-01
+
+The schema is now ready for table creation. You can start creating
+tables in iceberg_data.analytics_prod.
+```
+
+**With custom storage:**
+```
+Create a schema called sales_archive in iceberg_data with custom path /archive/sales
+```
+
+**Claude responds:**
+```
+Creating schema with custom storage configuration...
+
+Schema Created:
+- Schema name: sales_archive
+- Catalog: iceberg_data
+- Custom path: /archive/sales
+- Storage location: s3://lakehouse-bucket/archive/sales
+
+The schema has been created with a dedicated storage path for
+archived sales data.
+```
+
+**Use Cases:**
+- Set up new data domains
+- Organize data by business unit
+- Create isolated environments (dev/test/prod)
+- Separate data by retention policies
+- Implement data governance boundaries
+
+**Best Practices:**
+- Use descriptive schema names that reflect data purpose
+- Consider storage location for data locality
+- Plan schema structure before creating tables
+- Document schema purpose and ownership
+- Follow naming conventions consistently
+
+**Note:** Requires `lakehouse.schema.create` permission
+
+---
+
 ## Query Tools
 
 ### execute_select
@@ -531,6 +613,343 @@ or API directly with appropriate permissions.
 - Filter with WHERE clauses to reduce data scanned
 - Query partitioned columns when possible
 - Test queries with small limits first
+
+---
+
+## Data Ingestion Tools
+
+### create_ingestion_job
+
+Create a data ingestion job to load data from external sources into watsonx.data tables.
+
+**Category**: Data Ingestion
+
+**Parameters**:
+- `job_id` (string, required): Unique job identifier (e.g., "ingestion-1234567890")
+- `catalog` (string, required): Target catalog name
+- `schema` (string, required): Target schema name
+- `table` (string, required): Target table name
+- `file_paths` (string, required): Source file path (e.g., "s3://bucket-name/file.csv")
+- `file_type` (string, optional): Source file type - "csv", "parquet", "json" (default: "csv")
+- `bucket_name` (string, optional): S3 bucket name (extracted from file_paths if not provided)
+- `bucket_type` (string, optional): Bucket type - "ibm_cos", "aws_s3" (default: "ibm_cos")
+- `write_mode` (string, optional): Write mode - "append", "overwrite" (default: "append")
+- `engine_id` (string, optional): Spark engine ID to use for ingestion
+- `field_delimiter` (string, optional): CSV field delimiter (default: ",")
+- `line_delimiter` (string, optional): CSV line delimiter (default: "\n")
+- `escape_character` (string, optional): CSV escape character (default: "\\")
+- `header` (boolean, optional): Whether CSV has header row (default: true)
+- `encoding` (string, optional): File encoding (default: "UTF-8")
+- `driver_memory` (string, optional): Spark driver memory (default: "2G")
+- `driver_cores` (integer, optional): Spark driver cores (default: 1)
+- `executor_memory` (string, optional): Spark executor memory (default: "2G")
+- `executor_cores` (integer, optional): Spark executor cores (default: 1)
+- `num_executors` (integer, optional): Number of Spark executors (default: 1)
+
+**Returns**:
+- `job_id` (string): Job identifier
+- `status` (string): Job status ("queued", "running", "completed", "failed")
+- `create_time` (string): Job creation timestamp
+- Additional job configuration details
+
+**Example Usage:**
+
+**Natural language:**
+```
+Load the CSV file from s3://my-bucket/sales/2024/sales_data.csv into the iceberg_data catalog, sales_db schema, sales_2024 table
+```
+
+**Claude responds:**
+```
+Creating ingestion job to load CSV data...
+
+Job Created:
+- Job ID: ingest-sales-2024-001
+- Source: s3://my-bucket/sales/2024/sales_data.csv
+- Target: iceberg_data.sales_db.sales_2024
+- Bucket: my-bucket (ibm_cos)
+- File Type: CSV
+- Write Mode: append
+- Status: queued
+
+The job has been queued and will start processing shortly.
+Use get_ingestion_job to monitor progress.
+```
+
+**Parquet file example:**
+```
+Ingest parquet files from s3://data-lake/events/user_events.parquet into iceberg_data.events.user_events with overwrite mode
+```
+
+**Claude executes:**
+```
+Creating ingestion job for Parquet data...
+
+Job Configuration:
+- Job ID: ingest-events-001
+- Source: s3://data-lake/events/user_events.parquet
+- Target: iceberg_data.events.user_events
+- File Type: Parquet
+- Write Mode: overwrite
+- Status: queued
+
+The data will overwrite existing data in the target table.
+```
+
+**Use Cases:**
+- Bulk data loading from S3/COS
+- ETL pipeline data ingestion
+- Historical data migration
+- Regular data imports
+- Data lake ingestion
+
+**Best Practices:**
+- Use descriptive job IDs for tracking
+- Specify partition columns for large datasets
+- Configure Spark resources based on data size
+- Use appropriate file formats (Parquet for analytics)
+- Test with small datasets first
+
+---
+
+### list_ingestion_jobs
+
+List all data ingestion jobs with their status and configuration.
+
+**Category**: Data Ingestion
+
+**Parameters**:
+- `start` (integer, optional): Offset for pagination (default: 0, 0-based)
+- `limit` (integer, optional): Number of jobs per page (default: 10, max: 100, -1 for all)
+
+**Returns**:
+- `ingestion_jobs` (array): List of ingestion jobs
+  - `job_id` (string): Job identifier
+  - `status` (string): Job status
+  - `source_data_files` (string): Source path
+  - `target_table` (string): Target table
+  - `create_time` (string): Creation timestamp
+  - `start_time` (string): Start timestamp (if started)
+  - `end_time` (string): End timestamp (if completed)
+- `total_count` (integer): Total number of jobs
+- `page` (integer): Current page number
+
+**Example Usage:**
+
+**Natural language:**
+```
+Show me all ingestion jobs
+```
+
+**Claude responds:**
+```
+Ingestion Jobs:
+
+Active Jobs (2):
+1. ingest-sales-2024-001
+   Status: running (45% complete)
+   Source: s3://my-bucket/sales/2024/sales_data.csv
+   Target: iceberg_data.sales_db.raw.sales_2024
+   Started: 5 minutes ago
+   Progress: 1.2M rows processed
+
+2. ingest-events-001
+   Status: queued
+   Source: s3://data-lake/events/*.parquet
+   Target: iceberg_data.events.raw.user_events
+   Created: 2 minutes ago
+
+Completed Jobs (3):
+3. ingest-customers-123
+   Status: completed
+   Duration: 12 minutes
+   Rows: 5.2M rows ingested
+   Completed: 1 hour ago
+
+4. ingest-products-456
+   Status: completed
+   Duration: 3 minutes
+   Rows: 50K rows ingested
+   Completed: 3 hours ago
+
+5. ingest-orders-789
+   Status: failed
+   Error: Schema mismatch in column 'order_date'
+   Failed: 5 hours ago
+
+Total: 5 jobs
+```
+
+**Use Cases:**
+- Monitor ingestion pipeline status
+- Track job history
+- Identify failed jobs
+- Audit data loading activities
+
+---
+
+### get_ingestion_job
+
+Get detailed status and progress of a specific ingestion job.
+
+**Category**: Data Ingestion
+
+**Parameters**:
+- `job_id` (string, required): Job identifier
+
+**Returns**:
+- `job_id` (string): Job identifier
+- `status` (string): Current status
+- `source_data_files` (string): Source path
+- `target_table` (string): Target table
+- `username` (string): User who created the job
+- `create_time` (string): Creation timestamp
+- `start_time` (string): Start timestamp (if started)
+- `end_time` (string): End timestamp (if completed)
+- `progress` (number): Completion percentage (if running)
+- `rows_processed` (integer): Number of rows processed
+- `bytes_processed` (integer): Bytes processed
+- `error_message` (string): Error details (if failed)
+
+**Example Usage:**
+
+**Natural language:**
+```
+What's the status of ingestion job ingest-sales-2024-001?
+```
+
+**Claude responds:**
+```
+Ingestion Job Status: ingest-sales-2024-001
+
+Status: running
+Progress: 67.5%
+
+Job Details:
+- Source: s3://my-bucket/sales/2024/sales_data.csv
+- Target: iceberg_data.sales_db.raw.sales_2024
+- File Type: CSV
+- User: data_engineer
+
+Timing:
+- Created: 2024-01-15 10:30:00 UTC
+- Started: 2024-01-15 10:31:15 UTC
+- Running for: 8 minutes 45 seconds
+
+Progress:
+- Rows processed: 3,450,000
+- Data processed: 1.2 GB
+- Estimated completion: 4 minutes
+
+The job is progressing normally. Data is being written to the target
+table and will be available for querying once complete.
+```
+
+**Failed job example:**
+```
+Check status of job ingest-orders-789
+```
+
+**Claude responds:**
+```
+Ingestion Job Status: ingest-orders-789
+
+Status: ❌ FAILED
+
+Job Details:
+- Source: s3://my-bucket/orders/orders.csv
+- Target: iceberg_data.sales_db.raw.orders
+- User: etl_user
+
+Timing:
+- Created: 2024-01-15 05:00:00 UTC
+- Started: 2024-01-15 05:01:00 UTC
+- Failed: 2024-01-15 05:05:30 UTC
+- Duration: 4 minutes 30 seconds
+
+Error Details:
+Schema mismatch: expected INT but found STRING in column 'order_id'
+at row 125,430
+
+Recommendation:
+- Verify the source data schema matches the target table
+- Check for data quality issues in the source file
+- Consider using schema inference or explicit schema definition
+```
+
+**Use Cases:**
+- Monitor long-running ingestion jobs
+- Debug failed ingestions
+- Track data loading progress
+- Verify job completion
+
+---
+
+### delete_ingestion_job
+
+Cancel a running ingestion job or remove a job from history.
+
+**Category**: Data Ingestion
+
+**Important**: Jobs in 'failed' or 'completed' status cannot be deleted. Only jobs in 'starting', 'running', or 'queued' status can be deleted.
+
+**Parameters**:
+- `job_id` (string, required): Job identifier
+
+**Returns**:
+- Dict with deletion status
+
+**Example Usage:**
+
+**Natural language:**
+```
+Cancel ingestion job ingest-sales-2024-001
+```
+
+**Claude responds:**
+```
+Cancelling ingestion job...
+
+Job Cancelled: ingest-sales-2024-001
+- Status: cancelled
+- Rows processed before cancellation: 1,250,000
+- Partial data may have been written to target table
+
+The job has been stopped and removed from the queue.
+Note: Partial data that was already written to the target table
+will remain. You may need to clean up the target table if needed.
+```
+
+**Completed job deletion:**
+```
+Delete the completed job ingest-customers-123 from history
+```
+
+**Claude responds:**
+```
+Ingestion job deleted successfully.
+
+Job ingest-customers-123 has been removed from the job history.
+The ingested data in the target table remains unchanged.
+```
+
+**Use Cases:**
+- Cancel long-running jobs that are no longer needed
+- Clean up job history
+- Stop jobs consuming excessive resources
+- Remove failed job records
+
+**Best Practices:**
+- Verify job status before deletion
+- Consider if partial results are needed
+- Document reason for cancellation
+- Check target table for partial data after cancellation
+
+**Safety Notes:**
+- Deletion is immediate and cannot be undone
+- Running jobs will be forcefully terminated
+- Partial data may remain in target table
+- Use with caution in production environments
 
 ---
 
