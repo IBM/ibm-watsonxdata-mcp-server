@@ -531,3 +531,321 @@ class TestCreateSchema:
             )
         
         assert "Catalog not found" in str(exc_info.value)
+
+
+
+class TestRenameTable:
+    """Tests for rename_table tool."""
+
+    @pytest.mark.asyncio
+    async def test_rename_table_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully renaming a table."""
+        from lakehouse_mcp.tools.catalog.rename_table import rename_table
+        
+        mock_response = {
+            "name": "customers_new",
+            "catalog_name": "iceberg_data",
+            "schema_name": "sales_db",
+        }
+
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(200, json=mock_response))
+
+        result = await rename_table.fn(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            new_table_name="customers_new",
+            engine_id="presto-01",
+        )
+
+        assert result["name"] == "customers_new"
+        assert result["catalog_name"] == "iceberg_data"
+        assert result["schema_name"] == "sales_db"
+
+    @pytest.mark.asyncio
+    async def test_rename_table_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test renaming a non-existent table."""
+        from lakehouse_mcp.tools.catalog.rename_table import rename_table
+        
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await rename_table.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                new_table_name="new_name",
+                engine_id="presto-01",
+            )
+        
+        assert "Table not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_rename_table_name_conflict(self, mock_context, watsonx_client, respx_mock):
+        """Test renaming a table to an existing name."""
+        from lakehouse_mcp.tools.catalog.rename_table import rename_table
+        
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(409, json={"error": "Table name already exists"}))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await rename_table.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                new_table_name="orders",
+                engine_id="presto-01",
+            )
+        
+        assert "Table name already exists" in str(exc_info.value)
+
+
+class TestAddColumns:
+    """Tests for add_columns tool."""
+
+    @pytest.mark.asyncio
+    async def test_add_columns_single(self, mock_context, watsonx_client, respx_mock):
+        """Test adding a single column to a table."""
+        from lakehouse_mcp.tools.catalog.add_columns import add_columns
+        
+        mock_response = {
+            "columns": [
+                {
+                    "name": "new_column",
+                    "type": "string",
+                    "comment": "A new column",
+                }
+            ],
+            "total_count": 1,
+        }
+
+        respx_mock.post(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(200, json=mock_response))
+
+        columns = [
+            {
+                "name": "new_column",
+                "type": "string",
+                "comment": "A new column",
+            }
+        ]
+
+        result = await add_columns.fn(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            columns=columns,
+            engine_id="presto-01",
+        )
+
+        assert result["total_count"] == 1
+        assert len(result["columns"]) == 1
+        assert result["columns"][0]["name"] == "new_column"
+
+    @pytest.mark.asyncio
+    async def test_add_columns_multiple(self, mock_context, watsonx_client, respx_mock):
+        """Test adding multiple columns to a table."""
+        from lakehouse_mcp.tools.catalog.add_columns import add_columns
+        
+        mock_response = {
+            "columns": [
+                {"name": "col1", "type": "int"},
+                {"name": "col2", "type": "string"},
+                {"name": "col3", "type": "boolean"},
+            ],
+            "total_count": 3,
+        }
+
+        respx_mock.post(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(200, json=mock_response))
+
+        columns = [
+            {"name": "col1", "type": "int"},
+            {"name": "col2", "type": "string"},
+            {"name": "col3", "type": "boolean"},
+        ]
+
+        result = await add_columns.fn(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            columns=columns,
+            engine_id="presto-01",
+        )
+
+        assert result["total_count"] == 3
+        assert len(result["columns"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_add_columns_with_precision_scale(self, mock_context, watsonx_client, respx_mock):
+        """Test adding columns with precision and scale."""
+        from lakehouse_mcp.tools.catalog.add_columns import add_columns
+        
+        mock_response = {
+            "columns": [
+                {
+                    "name": "price",
+                    "type": "decimal",
+                    "precision": 10,
+                    "scale": 2,
+                }
+            ],
+            "total_count": 1,
+        }
+
+        respx_mock.post(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/products/columns?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(200, json=mock_response))
+
+        columns = [
+            {
+                "name": "price",
+                "type": "decimal",
+                "precision": 10,
+                "scale": 2,
+            }
+        ]
+
+        result = await add_columns.fn(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="products",
+            columns=columns,
+            engine_id="presto-01",
+        )
+
+        assert result["columns"][0]["precision"] == 10
+        assert result["columns"][0]["scale"] == 2
+
+    @pytest.mark.asyncio
+    async def test_add_columns_table_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test adding columns to non-existent table."""
+        from lakehouse_mcp.tools.catalog.add_columns import add_columns
+        
+        respx_mock.post(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent/columns?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+
+        columns = [{"name": "new_col", "type": "string"}]
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await add_columns.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                columns=columns,
+                engine_id="presto-01",
+            )
+        
+        assert "Table not found" in str(exc_info.value)
+
+
+class TestRenameColumn:
+    """Tests for rename_column tool."""
+
+    @pytest.mark.asyncio
+    async def test_rename_column_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully renaming a column."""
+        from lakehouse_mcp.tools.catalog.rename_column import rename_column
+        
+        mock_response = {
+            "name": "customer_email",
+            "type": "string",
+            "nullable": True,
+        }
+
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/email?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(200, json=mock_response))
+
+        result = await rename_column.fn(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            column_name="email",
+            new_column_name="customer_email",
+            engine_id="presto-01",
+        )
+
+        assert result["name"] == "customer_email"
+
+    @pytest.mark.asyncio
+    async def test_rename_column_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test renaming a non-existent column."""
+        from lakehouse_mcp.tools.catalog.rename_column import rename_column
+        
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/nonexistent?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(404, json={"error": "Column not found"}))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await rename_column.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                column_name="nonexistent",
+                new_column_name="new_name",
+                engine_id="presto-01",
+            )
+        
+        assert "Column not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_rename_column_name_conflict(self, mock_context, watsonx_client, respx_mock):
+        """Test renaming a column to an existing name."""
+        from lakehouse_mcp.tools.catalog.rename_column import rename_column
+        
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/email?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(409, json={"error": "Column name already exists"}))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await rename_column.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                column_name="email",
+                new_column_name="id",
+                engine_id="presto-01",
+            )
+        
+        assert "Column name already exists" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_rename_column_table_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test renaming a column in non-existent table."""
+        from lakehouse_mcp.tools.catalog.rename_column import rename_column
+        
+        respx_mock.patch(
+            "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent/columns/email?engine_id=presto-01"
+        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await rename_column.fn(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                column_name="email",
+                new_column_name="new_email",
+                engine_id="presto-01",
+            )
+        
+        assert "Table not found" in str(exc_info.value)

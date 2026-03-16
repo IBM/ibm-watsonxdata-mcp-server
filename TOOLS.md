@@ -13,6 +13,9 @@ Complete reference for all watsonx.data MCP tools.
   - [list_tables](#list_tables)
   - [describe_table](#describe_table)
   - [create_schema](#create_schema)
+  - [rename_table](#rename_table)
+  - [add_columns](#add_columns)
+  - [rename_column](#rename_column)
 - [Query Tools](#query-tools)
   - [execute_select](#execute_select)
 - [Data Ingestion Tools](#data-ingestion-tools)
@@ -476,6 +479,205 @@ archived sales data.
 - Plan schema structure before creating tables
 - Document schema purpose and ownership
 - Follow naming conventions consistently
+
+### rename_table
+
+Rename a table in a watsonx.data schema.
+
+**Category**: Catalog Management
+
+**Parameters**:
+- `catalog_name` (string, required): Catalog containing the table (e.g., "iceberg_data")
+- `schema_name` (string, required): Schema containing the table
+- `table_name` (string, required): Current table name
+- `new_table_name` (string, required): New name for the table
+- `engine_id` (string, required): Engine ID to use for the operation (from list_engines)
+
+**Returns**:
+- `name` (string): New table name
+- `catalog_name` (string): Catalog name
+- `schema_name` (string): Schema name
+
+**Example Usage:**
+
+**Rename a table:**
+```
+Rename the customers table to customers_v2 in sales_db schema
+```
+
+**Claude responds:**
+```
+✓ Table renamed successfully
+
+Old name: iceberg_data.sales_db.customers
+New name: iceberg_data.sales_db.customers_v2
+
+Note: Update any queries or applications that reference this table.
+```
+
+**Use Cases:**
+- Implement table versioning (e.g., customers_v1 → customers_v2)
+- Fix naming mistakes or typos
+- Align with new naming conventions
+- Prepare for table migrations
+
+**Important Notes:**
+- Table rename is atomic - no data is moved
+- Existing queries using old name will fail
+- Update dependent views and applications
+- Cannot rename to an existing table name
+
+**Best Practices:**
+- Communicate table renames to team members
+- Update documentation and data catalogs
+- Check for dependent views before renaming
+- Consider creating a view with old name for backward compatibility
+
+---
+
+### add_columns
+
+Add one or more columns to a table in a watsonx.data schema.
+
+**Category**: Catalog Management
+
+**Parameters**:
+- `catalog_name` (string, required): Catalog containing the table (e.g., "iceberg_data")
+- `schema_name` (string, required): Schema containing the table
+- `table_name` (string, required): Table to add columns to
+- `columns` (array, required): List of column definitions, each with:
+  - `name` (string, required): Column name
+  - `type` (string, required): Data type (e.g., "string", "int", "decimal(10,2)")
+  - `comment` (string, optional): Column description
+  - `extra` (string, optional): Additional column properties
+  - `precision` (integer, optional): Precision for decimal types
+  - `scale` (integer, optional): Scale for decimal types
+- `engine_id` (string, required): Engine ID to use for the operation (from list_engines)
+
+**Returns**:
+- `columns` (array): List of added column details
+- `total_count` (integer): Number of columns added
+
+**Example Usage:**
+
+**Add single column:**
+```
+Add a column called loyalty_points of type int to the customers table
+```
+
+**Claude responds:**
+```
+✓ Column added successfully
+
+Table: iceberg_data.sales_db.customers
+New column: loyalty_points (INT)
+
+The column has been added and is available for use.
+Existing rows will have NULL values for this column.
+```
+
+**Add multiple columns:**
+```
+Add columns email_verified (boolean) and last_login (timestamp) to customers table
+```
+
+**Claude responds:**
+```
+✓ 2 columns added successfully
+
+Table: iceberg_data.sales_db.customers
+
+New columns:
+  1. email_verified (BOOLEAN)
+  2. last_login (TIMESTAMP)
+
+Existing rows will have NULL values for these columns.
+```
+
+**Add decimal column with precision:**
+```
+Add a discount_rate column with decimal(5,2) type to products table
+```
+
+**Use Cases:**
+- Extend table schema with new attributes
+- Add tracking columns (created_at, updated_at)
+- Implement feature flags or status columns
+- Support new business requirements
+
+**Important Notes:**
+- New columns are added at the end of the table
+- Existing rows will have NULL values for new columns
+- Cannot add columns with NOT NULL constraint directly
+- Column names must be unique within the table
+
+**Best Practices:**
+- Add descriptive comments to document column purpose
+- Use appropriate data types for storage efficiency
+- Consider default values for new columns
+- Test queries after schema changes
+- Document schema evolution in version control
+
+---
+
+### rename_column
+
+Rename a column in a table in a watsonx.data schema.
+
+**Category**: Catalog Management
+
+**Parameters**:
+- `catalog_name` (string, required): Catalog containing the table (e.g., "iceberg_data")
+- `schema_name` (string, required): Schema containing the table
+- `table_name` (string, required): Table containing the column
+- `column_name` (string, required): Current column name
+- `new_column_name` (string, required): New name for the column
+- `engine_id` (string, required): Engine ID to use for the operation (from list_engines)
+
+**Returns**:
+- `name` (string): New column name
+- `type` (string): Column data type
+- `nullable` (boolean): Whether column allows NULL values
+
+**Example Usage:**
+
+**Rename a column:**
+```
+Rename the email column to customer_email in the customers table
+```
+
+**Claude responds:**
+```
+✓ Column renamed successfully
+
+Table: iceberg_data.sales_db.customers
+Old name: email
+New name: customer_email
+Type: VARCHAR
+
+Note: Update any queries that reference this column.
+```
+
+**Use Cases:**
+- Fix naming mistakes or typos
+- Improve column name clarity
+- Align with naming conventions
+- Resolve naming conflicts
+
+**Important Notes:**
+- Column rename is metadata-only - no data is modified
+- Existing queries using old name will fail
+- Update dependent views and applications
+- Cannot rename to an existing column name
+
+**Best Practices:**
+- Communicate column renames to team members
+- Update documentation and data dictionaries
+- Search codebase for references to old column name
+- Consider impact on BI tools and reports
+- Test queries after renaming
+
+---
 
 **Note:** Requires `lakehouse.schema.create` permission
 
