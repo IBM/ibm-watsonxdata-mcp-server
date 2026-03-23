@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `update_spark_engine` - Update Spark engine configuration and settings
   - `pause_spark_engine` - Pause running Spark engines (SAAS only)
   - `resume_spark_engine` - Resume paused Spark engines (SAAS only)
+- Query analysis tools:
+  - `explain_query` - Get query execution plan without running the query
+  - `explain_analyze_query` - Get detailed query analysis with execution statistics
 
 ## [0.1.2] - 2026-03-16
 

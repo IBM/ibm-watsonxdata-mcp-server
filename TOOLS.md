@@ -22,6 +22,8 @@ Complete reference for all watsonx.data MCP tools.
   - [rename_column](#rename_column)
 - [Query Tools](#query-tools)
   - [execute_select](#execute_select)
+  - [explain_query](#explain_query)
+  - [explain_analyze_query](#explain_analyze_query)
 - [Data Ingestion Tools](#data-ingestion-tools)
   - [create_ingestion_job](#create_ingestion_job)
   - [list_ingestion_jobs](#list_ingestion_jobs)
@@ -933,6 +935,136 @@ or API directly with appropriate permissions.
 - Filter with WHERE clauses to reduce data scanned
 - Query partitioned columns when possible
 - Test queries with small limits first
+
+---
+
+### explain_query
+
+Get query execution plan without running the query to understand optimization and resource usage.
+
+**Category**: Query Analysis
+
+**Parameters**:
+- `engine_id` (string, required): Presto or Prestissimo engine identifier
+- `statement` (string, required): SQL query to explain
+- `engine_type` (string, optional): "presto" or "prestissimo" (default: "presto")
+- `format` (string, optional): "json" or "text"
+- `type` (string, optional): "logical", "distributed", "validate", or "io"
+
+**Returns**:
+- `engine_id` (string): Engine identifier used
+- `engine_type` (string): Engine type
+- `statement` (string): Query that was explained
+- `plan` (string): Query execution plan
+- `response` (object): Full API response
+
+**Example Usage:**
+
+**Natural language:**
+```
+Explain how this query will be executed:
+SELECT c.customer_id, COUNT(o.order_id) FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id
+```
+
+**Claude responds:**
+```
+Query Execution Plan:
+
+Fragment 0 [SINGLE]
+    Output: [customer_id, count]
+    - Aggregate(FINAL)[customer_id]
+        - LocalExchange[HASH]
+            - RemoteSource[1]
+
+Fragment 1 [HASH]
+    - Aggregate(PARTIAL)[customer_id]
+        - LeftJoin[customer_id = customer_id]
+            - TableScan[customers] (10,000 rows)
+            - TableScan[orders] (50,000 rows)
+
+This plan shows hash-based join and two-stage aggregation.
+```
+
+**Use Cases:**
+- Understand query performance before execution
+- Identify optimization opportunities
+- Debug slow queries
+- Validate query correctness
+
+**Best Practices:**
+- Use `type="distributed"` to see data movement
+- Check for table scans on large tables
+- Look for partition pruning in WHERE clauses
+- Use before running expensive queries
+
+---
+
+### explain_analyze_query
+
+Get detailed query analysis with actual execution statistics to measure real performance.
+
+**Category**: Query Analysis
+
+**Parameters**:
+- `engine_id` (string, required): Presto or Prestissimo engine identifier
+- `statement` (string, required): SQL query to analyze
+- `engine_type` (string, optional): "presto" or "prestissimo" (default: "presto")
+- `verbose` (boolean, optional): Include detailed statistics
+
+**Returns**:
+- `engine_id` (string): Engine identifier used
+- `engine_type` (string): Engine type
+- `statement` (string): Query that was analyzed
+- `analysis` (string): Detailed execution analysis with statistics
+- `response` (object): Full API response
+
+**Example Usage:**
+
+**Natural language:**
+```
+Analyze the performance of:
+SELECT region, COUNT(*) as orders, SUM(total) as revenue
+FROM orders WHERE order_date >= DATE '2024-01-01'
+GROUP BY region
+```
+
+**Claude responds:**
+```
+Query Performance Analysis:
+
+Fragment 0 [SINGLE]
+    CPU: 1.23s, Input: 5 rows, Output: 5 rows
+    - Aggregate(FINAL)[region]
+
+Fragment 1 [HASH]
+    CPU: 5.67s, Input: 1M rows, Output: 5 rows
+    - Aggregate(PARTIAL)[region]
+        - ScanFilterProject[orders]
+            Scanned: 5M rows (625 MB)
+            Filtered: 4M rows (80% reduction)
+
+Performance Summary:
+- Total CPU: 6.90s
+- Execution time: 11.37s
+- Data scanned: 625 MB
+- Final output: 5 rows
+
+✓ Partition pruning reduced scan by 80%
+```
+
+**Use Cases:**
+- Measure actual query performance
+- Identify performance bottlenecks
+- Compare query variations
+- Troubleshoot slow queries
+
+**Best Practices:**
+- Use `verbose=true` for detailed statistics
+- Compare with explain_query to see estimated vs actual
+- Look for high CPU time or data scanned
+- Use to validate optimization improvements
 
 ---
 

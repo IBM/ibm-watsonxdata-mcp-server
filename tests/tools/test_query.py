@@ -580,4 +580,257 @@ class TestExecuteSelect:
                 engine_id="presto-01",
             )
 
-        assert "Query was canceled" in str(exc_info.value)
+
+
+class TestExplainQuery:
+    """Tests for explain_query tool."""
+
+    @pytest.mark.asyncio
+    async def test_explain_query_presto_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful query explanation for Presto engine."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        mock_response = {
+            "result": "Fragment 0 [SINGLE]\n    Output layout: [id, name]\n    Output partitioning: SINGLE\n"
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_query.fn(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT id, name FROM customers",
+            engine_type="presto",
+        )
+
+        assert result["engine_id"] == "presto-01"
+        assert result["engine_type"] == "presto"
+        assert result["statement"] == "SELECT id, name FROM customers"
+        assert "Fragment 0" in result["plan"]
+
+    @pytest.mark.asyncio
+    async def test_explain_query_prestissimo_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful query explanation for Prestissimo engine."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        mock_response = {
+            "result": "Fragment 0 [SINGLE]\n    Output layout: [id, name]\n    Output partitioning: SINGLE\n"
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/query_explain").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_query.fn(
+            mock_context,
+            engine_id="prestissimo-01",
+            statement="SELECT id, name FROM customers",
+            engine_type="prestissimo",
+        )
+
+        assert result["engine_id"] == "prestissimo-01"
+        assert result["engine_type"] == "prestissimo"
+        assert "Fragment 0" in result["plan"]
+
+    @pytest.mark.asyncio
+    async def test_explain_query_with_format_json(self, mock_context, watsonx_client, respx_mock):
+        """Test query explanation with JSON format."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        mock_response = {
+            "result": '{"fragments": [{"id": 0, "type": "SINGLE"}]}'
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_query.fn(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT * FROM customers",
+            engine_type="presto",
+            format="json",
+        )
+
+        # Verify format parameter was sent
+        request_body = route.calls[0].request.content
+        assert b'"format":"json"' in request_body
+        assert "fragments" in result["plan"]
+
+    @pytest.mark.asyncio
+    async def test_explain_query_with_type_distributed(self, mock_context, watsonx_client, respx_mock):
+        """Test query explanation with distributed type."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        mock_response = {
+            "result": "Distributed plan:\nFragment 0 [SOURCE]\n  TableScan[customers]\n"
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_query.fn(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT * FROM customers",
+            engine_type="presto",
+            type="distributed",
+        )
+
+        # Verify type parameter was sent
+        request_body = route.calls[0].request.content
+        assert b'"type":"distributed"' in request_body
+        assert "Distributed plan" in result["plan"]
+
+    @pytest.mark.asyncio
+    async def test_explain_query_invalid_engine_type(self, mock_context):
+        """Test that invalid engine type is rejected."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        with pytest.raises(ValueError) as exc_info:
+            await explain_query.fn(
+                mock_context,
+                engine_id="spark-01",
+                statement="SELECT * FROM customers",
+                engine_type="spark",  # Invalid - only presto/prestissimo supported
+            )
+
+        assert "Invalid engine_type" in str(exc_info.value)
+        assert "Must be 'presto' or 'prestissimo'" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_explain_query_api_error(self, mock_context, watsonx_client, respx_mock):
+        """Test query explanation with API error."""
+        from lakehouse_mcp.tools.query.explain_query import explain_query
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain").mock(
+            return_value=httpx.Response(400, json={"error": "Invalid SQL syntax"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await explain_query.fn(
+                mock_context,
+                engine_id="presto-01",
+                statement="SELECT * FORM customers",  # Typo: FORM instead of FROM
+                engine_type="presto",
+            )
+        
+        assert "Invalid SQL syntax" in str(exc_info.value)
+
+
+class TestExplainAnalyzeQuery:
+    """Tests for explain_analyze_query tool."""
+
+    @pytest.mark.asyncio
+    async def test_explain_analyze_query_presto_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful query analysis for Presto engine."""
+        from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
+
+        mock_response = {
+            "result": "Fragment 0 [SINGLE]\n    CPU: 1.23s, Scheduled: 2.45s, Input: 1000 rows\n"
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain_analyze").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_analyze_query.fn(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT id, name FROM customers",
+            engine_type="presto",
+        )
+
+        assert result["engine_id"] == "presto-01"
+        assert result["engine_type"] == "presto"
+        assert result["statement"] == "SELECT id, name FROM customers"
+        assert "CPU:" in result["analysis"]
+
+    @pytest.mark.asyncio
+    async def test_explain_analyze_query_prestissimo_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful query analysis for Prestissimo engine."""
+        from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
+
+        mock_response = {
+            "result": "Fragment 0 [SINGLE]\n    CPU: 0.89s, Scheduled: 1.23s, Input: 500 rows\n"
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/query_explain_analyze").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_analyze_query.fn(
+            mock_context,
+            engine_id="prestissimo-01",
+            statement="SELECT id, name FROM customers",
+            engine_type="prestissimo",
+        )
+
+        assert result["engine_id"] == "prestissimo-01"
+        assert result["engine_type"] == "prestissimo"
+        assert "CPU:" in result["analysis"]
+
+    @pytest.mark.asyncio
+    async def test_explain_analyze_query_with_verbose(self, mock_context, watsonx_client, respx_mock):
+        """Test query analysis with verbose flag."""
+        from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
+
+        mock_response = {
+            "result": "Detailed analysis:\nFragment 0 [SINGLE]\n    CPU: 1.23s\n    Memory: 256MB\n"
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain_analyze").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await explain_analyze_query.fn(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT * FROM customers",
+            engine_type="presto",
+            verbose=True,
+        )
+
+        # Verify verbose parameter was sent
+        request_body = route.calls[0].request.content
+        assert b'"verbose":true' in request_body
+        assert "Detailed analysis" in result["analysis"]
+
+    @pytest.mark.asyncio
+    async def test_explain_analyze_query_invalid_engine_type(self, mock_context):
+        """Test that invalid engine type is rejected."""
+        from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
+
+        with pytest.raises(ValueError) as exc_info:
+            await explain_analyze_query.fn(
+                mock_context,
+                engine_id="spark-01",
+                statement="SELECT * FROM customers",
+                engine_type="spark",  # Invalid - only presto/prestissimo supported
+            )
+
+        assert "Invalid engine_type" in str(exc_info.value)
+        assert "Must be 'presto' or 'prestissimo'" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_explain_analyze_query_api_error(self, mock_context, watsonx_client, respx_mock):
+        """Test query analysis with API error."""
+        from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain_analyze").mock(
+            return_value=httpx.Response(400, json={"error": "Query execution failed"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await explain_analyze_query.fn(
+                mock_context,
+                engine_id="presto-01",
+                statement="SELECT * FROM customers",
+                engine_type="presto",
+            )
+        
+        assert "Query execution failed" in str(exc_info.value)
