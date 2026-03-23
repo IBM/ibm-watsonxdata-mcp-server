@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Spark engine management tools:
+  - `create_spark_engine` - Create new Spark engines in watsonx.data
+  - `update_spark_engine` - Update Spark engine configuration and settings
+  - `pause_spark_engine` - Pause running Spark engines (SAAS only)
+  - `resume_spark_engine` - Resume paused Spark engines (SAAS only)
+
 ## [0.1.2] - 2026-03-16
 
 ### Added

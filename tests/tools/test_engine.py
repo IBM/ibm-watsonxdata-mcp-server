@@ -249,4 +249,174 @@ class TestListEngines:
 
         # Both routes should be called
         assert presto_route.called
-        assert spark_route.called
+
+
+class TestCreateSparkEngine:
+    """Tests for create_spark_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_spark_engine_minimal(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a Spark engine with minimal parameters."""
+        from lakehouse_mcp.tools.engine.create_spark_engine import create_spark_engine
+
+        mock_response = {
+            "engine_id": "spark-new",
+            "display_name": "New Spark Engine",
+            "origin": "native",
+            "status": "running",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await create_spark_engine.fn(
+            mock_context,
+            origin="native",
+            display_name="New Spark Engine",
+            storage_name="test-bucket",
+        )
+
+        assert result["engine_id"] == "spark-new"
+        assert result["display_name"] == "New Spark Engine"
+        assert result["origin"] == "native"
+
+    @pytest.mark.asyncio
+    async def test_create_spark_engine_full(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a Spark engine with all parameters."""
+        from lakehouse_mcp.tools.engine.create_spark_engine import create_spark_engine
+
+        mock_response = {
+            "engine_id": "spark-full",
+            "display_name": "Full Spark Engine",
+            "origin": "native",
+            "description": "Test Spark engine",
+            "status": "running",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await create_spark_engine.fn(
+            mock_context,
+            origin="native",
+            display_name="Full Spark Engine",
+            storage_name="test-bucket",
+            description="Test Spark engine",
+            default_version="3.5",
+            associated_catalogs=["iceberg_data"],
+            tags=["test", "dev"],
+        )
+
+        assert result["engine_id"] == "spark-full"
+        assert result["display_name"] == "Full Spark Engine"
+        assert result["description"] == "Test Spark engine"
+
+
+class TestPauseSparkEngine:
+    """Tests for pause_spark_engine tool (SAAS only)."""
+
+    @pytest.mark.asyncio
+    async def test_pause_spark_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully pausing a Spark engine."""
+        from lakehouse_mcp.tools.engine.pause_spark_engine import pause_spark_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines/spark-01/pause").mock(
+            return_value=httpx.Response(
+                200,
+                json={"message": "pause spark engine", "message_code": "success"},
+            )
+        )
+
+        result = await pause_spark_engine.fn(mock_context, engine_id="spark-01", force=False)
+
+        assert result["engine_id"] == "spark-01"
+        assert result["forced"] is False
+        assert result["message"] == "pause spark engine"
+
+    @pytest.mark.asyncio
+    async def test_pause_spark_engine_with_force(self, mock_context, watsonx_client, respx_mock):
+        """Test pausing Spark engine with force flag."""
+        from lakehouse_mcp.tools.engine.pause_spark_engine import pause_spark_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines/spark-01/pause").mock(
+            return_value=httpx.Response(200, json={"message": "pause spark engine"})
+        )
+
+        result = await pause_spark_engine.fn(mock_context, engine_id="spark-01", force=True)
+
+        assert result["engine_id"] == "spark-01"
+        assert result["forced"] is True
+
+class TestResumeSparkEngine:
+    """Tests for resume_spark_engine tool (SAAS only)."""
+
+    @pytest.mark.asyncio
+    async def test_resume_spark_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully resuming a Spark engine."""
+        from lakehouse_mcp.tools.engine.resume_spark_engine import resume_spark_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines/spark-01/resume").mock(
+            return_value=httpx.Response(200, json={"message": "resume spark engine", "message_code": "success"})
+        )
+
+        result = await resume_spark_engine.fn(mock_context, engine_id="spark-01")
+
+        assert result["engine_id"] == "spark-01"
+        assert result["message"] == "resume spark engine"
+
+class TestUpdateSparkEngine:
+    """Tests for update_spark_engine tool (SAAS only)."""
+
+    @pytest.mark.asyncio
+    async def test_update_spark_engine_description(self, mock_context, watsonx_client, respx_mock):
+        """Test updating Spark engine description."""
+        from lakehouse_mcp.tools.engine.update_spark_engine import update_spark_engine
+
+        mock_response = {
+            "engine_id": "spark-01",
+            "display_name": "Spark Engine",
+            "description": "Updated description",
+        }
+
+        respx_mock.patch("https://test.watsonx.com/api/v3/spark_engines/spark-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await update_spark_engine.fn(
+            mock_context,
+            engine_id="spark-01",
+            description="Updated description",
+        )
+
+        assert result["engine_id"] == "spark-01"
+        assert result["description"] == "Updated description"
+
+    @pytest.mark.asyncio
+    async def test_update_spark_engine_full(self, mock_context, watsonx_client, respx_mock):
+        """Test updating Spark engine with all parameters."""
+        from lakehouse_mcp.tools.engine.update_spark_engine import update_spark_engine
+
+        mock_response = {
+            "engine_id": "spark-01",
+            "display_name": "Updated Spark Engine",
+            "description": "Updated description",
+            "tags": ["production", "updated"],
+        }
+
+        respx_mock.patch("https://test.watsonx.com/api/v3/spark_engines/spark-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await update_spark_engine.fn(
+            mock_context,
+            engine_id="spark-01",
+            display_name="Updated Spark Engine",
+            description="Updated description",
+            tags=["production", "updated"],
+        )
+
+        assert result["display_name"] == "Updated Spark Engine"
+        assert result["description"] == "Updated description"
+

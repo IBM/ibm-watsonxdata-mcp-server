@@ -8,6 +8,10 @@ Complete reference for all watsonx.data MCP tools.
   - [get_instance_details](#get_instance_details)
 - [Engine Tools](#engine-tools)
   - [list_engines](#list_engines)
+  - [create_spark_engine](#create_spark_engine)
+  - [update_spark_engine](#update_spark_engine)
+  - [pause_spark_engine](#pause_spark_engine)
+  - [resume_spark_engine](#resume_spark_engine)
 - [Catalog Tools](#catalog-tools)
   - [list_schemas](#list_schemas)
   - [list_tables](#list_tables)
@@ -162,6 +166,120 @@ Presto Engines (2):
 
 **Best Practice:** Get engine IDs from this tool before using `execute_select`
 
+
+### create_spark_engine
+
+Create a new Spark engine in watsonx.data.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `origin` (string, required): Engine origin - "native", "external", or "discover"
+- `display_name` (string, required): Display name for the engine
+- `storage_name` (string, required): Storage/bucket name for engine_home
+- `associated_catalogs` (array of strings, optional): List of catalog IDs to associate
+- `description` (string, optional): Engine description
+- `default_version` (string, optional): Spark version (default: "3.5")
+- `default_config` (object, optional): Additional engine configuration
+- `tags` (array of strings, optional): Tags for the engine
+
+**Returns**:
+- `engine_id` (string): Created engine identifier
+- `display_name` (string): Engine display name
+- `origin` (string): Engine origin
+- `status` (string): Initial engine status
+
+**Example Usage:**
+```
+Create a new Spark engine named spark-etl for data processing
+```
+
+**Use Cases:**
+- Set up Spark engines for ETL workloads
+- Create dedicated engines for machine learning
+- Provision engines for batch processing
+- Set up development/test Spark environments
+
+---
+
+### update_spark_engine
+
+Update Spark engine configuration and settings.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+- `description` (string, optional): Updated description
+- `display_name` (string, optional): Updated display name
+- `configuration` (object, optional): Engine configuration (default_config, default_version, engine_home)
+- `tags` (array of strings, optional): Updated tags
+
+**Returns**:
+- Updated engine configuration
+
+**Example Usage:**
+```
+Update spark-prod engine description and add production tag
+```
+
+**Note**: Spark engines do NOT support engine_restart parameter. Configuration changes may require manual restart.
+
+---
+
+### pause_spark_engine
+
+Pause a running Spark engine (SAAS deployments only).
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+- `force` (boolean, optional): Force pause even if applications running (default: false)
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `forced` (boolean): Whether force flag was used
+- `message` (string): Operation status message
+
+**Example Usage:**
+```
+Pause spark-etl engine with force to stop running applications
+```
+
+**Use Cases:**
+- Stop Spark engines during off-hours
+- Force stop engines with stuck applications
+- Save resources on SAAS deployments
+
+**Important**: 
+- **SAAS ONLY** - Not available in Software deployments
+- `force=true` will terminate running applications
+- `force=false` will fail if applications are running
+
+---
+
+### resume_spark_engine
+
+Resume a paused Spark engine (SAAS deployments only).
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `message` (string): Operation status message
+
+**Example Usage:**
+```
+Resume spark-etl for daily batch jobs
+```
+
+**Important**: **SAAS ONLY** - Not available in Software deployments
+
+---
 ---
 
 ## Catalog Tools
