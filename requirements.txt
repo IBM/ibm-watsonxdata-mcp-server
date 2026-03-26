@@ -206,7 +206,7 @@ referencing==0.36.2
     #   jsonschema
     #   jsonschema-path
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.0
     # via
     #   ibm-cloud-sdk-core
     #   jsonschema-path
