@@ -7,7 +7,9 @@ This file has been modified with the assistance of IBM Bob AI tool
 import httpx
 import pytest
 
+from lakehouse_mcp.tools.query.execute_insert import execute_insert
 from lakehouse_mcp.tools.query.execute_select import execute_select
+from lakehouse_mcp.tools.query.execute_update import execute_update
 
 
 class TestExecuteSelect:
@@ -579,6 +581,542 @@ class TestExecuteSelect:
                 schema_name="sales_db",
                 engine_id="presto-01",
             )
+
+        assert "Query was canceled" in str(exc_info.value)
+
+
+class TestExecuteInsert:
+    """Tests for execute_insert tool."""
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful INSERT execution."""
+        mock_response = {
+            "data": {
+                "id": "query-insert-123",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 3,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await execute_insert.fn(
+            mock_context,
+            sql="INSERT INTO customers (id, name) VALUES (1, 'Alice'), (2, 'Bob'), (3, 'Charlie')",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["query_id"] == "query-insert-123"
+        assert result["rows_inserted"] == 3
+        assert result["status"] == "success"
+        assert result["catalog_name"] == "iceberg_data"
+        assert result["schema_name"] == "sales_db"
+        assert result["execution_time_ms"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_invalid_query_not_insert(self, mock_context):
+        """Test that non-INSERT queries are rejected."""
+        invalid_queries = [
+            "SELECT * FROM customers",
+            "UPDATE customers SET name = 'test'",
+            "DELETE FROM customers WHERE id = 1",
+            "DROP TABLE customers",
+            "CREATE TABLE test (id INT)",
+        ]
+
+        for query in invalid_queries:
+            with pytest.raises(ValueError) as exc_info:
+                await execute_insert.fn(
+                    mock_context,
+                    sql=query,
+                    catalog_name="iceberg_data",
+                    schema_name="sales_db",
+                    engine_id="presto-01",
+                )
+
+            assert "Only INSERT queries are allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_multiple_statements_rejected(self, mock_context):
+        """Test that multiple statements are rejected."""
+        query = "INSERT INTO customers VALUES (1, 'test'); DROP TABLE customers;"
+
+        with pytest.raises(ValueError) as exc_info:
+            await execute_insert.fn(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "Multiple statements not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
+        """Test that a single trailing semicolon is allowed."""
+        mock_response = {
+            "data": {
+                "id": "query-insert-456",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 1,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await execute_insert.fn(
+            mock_context,
+            sql="INSERT INTO customers (id, name) VALUES (1, 'Test');",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["rows_inserted"] == 1
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_case_insensitive(self, mock_context, watsonx_client, respx_mock):
+        """Test that INSERT keyword is case-insensitive."""
+        mock_response = {
+            "data": {
+                "id": "query-insert-789",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 1,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        for query in [
+            "insert into customers values (1, 'test')",
+            "INSERT INTO customers VALUES (1, 'test')",
+            "InSeRt INTO customers VALUES (1, 'test')",
+        ]:
+            result = await execute_insert.fn(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+            assert result["rows_inserted"] == 1
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_empty_query(self, mock_context):
+        """Test that empty queries are rejected."""
+        with pytest.raises(ValueError) as exc_info:
+            await execute_insert.fn(
+                mock_context,
+                sql="",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "SQL query cannot be empty" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_polling_through_states(self, mock_context, watsonx_client, respx_mock):
+        """Test polling through RUNNING to FINISHED states."""
+        running_response = {
+            "data": {
+                "id": "query-insert-running",
+                "nextUri": "next-page-1",
+                "stats": {"state": "RUNNING"},
+            }
+        }
+
+        finished_response = {
+            "data": {
+                "id": "query-insert-running",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 5,
+            }
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01")
+        route.side_effect = [
+            httpx.Response(200, json=running_response),
+            httpx.Response(200, json=finished_response),
+        ]
+
+        result = await execute_insert.fn(
+            mock_context,
+            sql="INSERT INTO customers SELECT * FROM temp_customers",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["rows_inserted"] == 5
+        assert result["query_id"] == "query-insert-running"
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_query_failed_state(self, mock_context, watsonx_client, respx_mock):
+        """Test handling of FAILED query state."""
+        failed_response = {
+            "data": {
+                "id": "query-insert-failed",
+                "nextUri": "",
+                "stats": {"state": "FAILED"},
+            },
+            "error": {"message": "Table does not exist"},
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=failed_response)
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_insert.fn(
+                mock_context,
+                sql="INSERT INTO nonexistent VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "INSERT query failed" in str(exc_info.value)
+        assert "Table does not exist" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
+        """Test handling of CANCELED query state."""
+        canceled_response = {
+            "data": {
+                "id": "query-insert-canceled",
+                "nextUri": "",
+                "stats": {"state": "CANCELED"},
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=canceled_response)
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_insert.fn(
+                mock_context,
+                sql="INSERT INTO customers VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "INSERT query was canceled" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_api_error(self, mock_context, watsonx_client, respx_mock):
+        """Test INSERT execution with API error."""
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(400, json={"error": "Syntax error in query"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_insert.fn(
+                mock_context,
+                sql="INSERT INTO customers VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "API Error" in str(exc_info.value)
+
+
+class TestExecuteUpdate:
+    """Tests for execute_update tool."""
+
+    @pytest.mark.asyncio
+    async def test_execute_update_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successful UPDATE execution."""
+        mock_response = {
+            "data": {
+                "id": "query-update-123",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 5,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await execute_update.fn(
+            mock_context,
+            sql="UPDATE customers SET status = 'active' WHERE id > 100",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["query_id"] == "query-update-123"
+        assert result["rows_updated"] == 5
+        assert result["status"] == "success"
+        assert result["catalog_name"] == "iceberg_data"
+        assert result["schema_name"] == "sales_db"
+        assert result["execution_time_ms"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_execute_update_invalid_query_not_update(self, mock_context):
+        """Test that non-UPDATE queries are rejected."""
+        invalid_queries = [
+            "SELECT * FROM customers",
+            "INSERT INTO customers VALUES (1, 'test')",
+            "DELETE FROM customers WHERE id = 1",
+            "DROP TABLE customers",
+            "CREATE TABLE test (id INT)",
+        ]
+
+        for query in invalid_queries:
+            with pytest.raises(ValueError) as exc_info:
+                await execute_update.fn(
+                    mock_context,
+                    sql=query,
+                    catalog_name="iceberg_data",
+                    schema_name="sales_db",
+                    engine_id="presto-01",
+                )
+
+            assert "Only UPDATE queries are allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_multiple_statements_rejected(self, mock_context):
+        """Test that multiple statements are rejected."""
+        query = "UPDATE customers SET name = 'test'; DROP TABLE customers;"
+
+        with pytest.raises(ValueError) as exc_info:
+            await execute_update.fn(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "Multiple statements not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
+        """Test that a single trailing semicolon is allowed."""
+        mock_response = {
+            "data": {
+                "id": "query-update-456",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 2,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await execute_update.fn(
+            mock_context,
+            sql="UPDATE customers SET name = 'Test' WHERE id = 1;",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["rows_updated"] == 2
+
+    @pytest.mark.asyncio
+    async def test_execute_update_case_insensitive(self, mock_context, watsonx_client, respx_mock):
+        """Test that UPDATE keyword is case-insensitive."""
+        mock_response = {
+            "data": {
+                "id": "query-update-789",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 1,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        for query in [
+            "update customers set name = 'test' where id = 1",
+            "UPDATE customers SET name = 'test' WHERE id = 1",
+            "UpDaTe customers SET name = 'test' WHERE id = 1",
+        ]:
+            result = await execute_update.fn(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+            assert result["rows_updated"] == 1
+
+    @pytest.mark.asyncio
+    async def test_execute_update_empty_query(self, mock_context):
+        """Test that empty queries are rejected."""
+        with pytest.raises(ValueError) as exc_info:
+            await execute_update.fn(
+                mock_context,
+                sql="",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "SQL query cannot be empty" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_polling_through_states(self, mock_context, watsonx_client, respx_mock):
+        """Test polling through RUNNING to FINISHED states."""
+        running_response = {
+            "data": {
+                "id": "query-update-running",
+                "nextUri": "next-page-1",
+                "stats": {"state": "RUNNING"},
+            }
+        }
+
+        finished_response = {
+            "data": {
+                "id": "query-update-running",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 10,
+            }
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01")
+        route.side_effect = [
+            httpx.Response(200, json=running_response),
+            httpx.Response(200, json=finished_response),
+        ]
+
+        result = await execute_update.fn(
+            mock_context,
+            sql="UPDATE customers SET status = 'inactive' WHERE last_login < '2020-01-01'",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["rows_updated"] == 10
+        assert result["query_id"] == "query-update-running"
+
+    @pytest.mark.asyncio
+    async def test_execute_update_query_failed_state(self, mock_context, watsonx_client, respx_mock):
+        """Test handling of FAILED query state."""
+        failed_response = {
+            "data": {
+                "id": "query-update-failed",
+                "nextUri": "",
+                "stats": {"state": "FAILED"},
+            },
+            "error": {"message": "Column does not exist"},
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=failed_response)
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_update.fn(
+                mock_context,
+                sql="UPDATE customers SET nonexistent_column = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "UPDATE query failed" in str(exc_info.value)
+        assert "Column does not exist" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
+        """Test handling of CANCELED query state."""
+        canceled_response = {
+            "data": {
+                "id": "query-update-canceled",
+                "nextUri": "",
+                "stats": {"state": "CANCELED"},
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=canceled_response)
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_update.fn(
+                mock_context,
+                sql="UPDATE customers SET name = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "UPDATE query was canceled" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_api_error(self, mock_context, watsonx_client, respx_mock):
+        """Test UPDATE execution with API error."""
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(400, json={"error": "Syntax error in query"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await execute_update.fn(
+                mock_context,
+                sql="UPDATE customers SET name = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
+
+        assert "API Error" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_execute_update_zero_rows_updated(self, mock_context, watsonx_client, respx_mock):
+        """Test UPDATE with no matching rows."""
+        mock_response = {
+            "data": {
+                "id": "query-update-zero",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "updateCount": 0,
+            }
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await execute_update.fn(
+            mock_context,
+            sql="UPDATE customers SET name = 'test' WHERE id = -999",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result["rows_updated"] == 0
+        assert result["status"] == "success"
+
 
 
 

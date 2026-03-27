@@ -22,18 +22,30 @@ from lakehouse_mcp.tools.ingestion import (
     list_ingestion_jobs,
 )
 from lakehouse_mcp.tools.platform import get_instance_details
-from lakehouse_mcp.tools.query import execute_select
+from lakehouse_mcp.tools.query import execute_insert, execute_select, execute_update
+from lakehouse_mcp.tools.spark_applications import (
+    get_spark_application_status,
+    list_spark_applications,
+    stop_spark_application,
+    submit_spark_application,
+)
 
 __all__ = [
     "create_ingestion_job",
     "create_schema",
     "delete_ingestion_job",
     "describe_table",
+    "execute_insert",
     "execute_select",
+    "execute_update",
     "get_ingestion_job",
     "get_instance_details",
+    "get_spark_application_status",
     "list_engines",
     "list_ingestion_jobs",
     "list_schemas",
+    "list_spark_applications",
     "list_tables",
+    "stop_spark_application",
+    "submit_spark_application",
 ]

@@ -22,8 +22,15 @@ Complete reference for all watsonx.data MCP tools.
   - [rename_column](#rename_column)
 - [Query Tools](#query-tools)
   - [execute_select](#execute_select)
+  - [execute_insert](#execute_insert)
+  - [execute_update](#execute_update)
   - [explain_query](#explain_query)
   - [explain_analyze_query](#explain_analyze_query)
+- [Spark Application Tools](#spark-application-tools)
+  - [submit_spark_application](#submit_spark_application)
+  - [list_spark_applications](#list_spark_applications)
+  - [get_spark_application_status](#get_spark_application_status)
+  - [stop_spark_application](#stop_spark_application)
 - [Data Ingestion Tools](#data-ingestion-tools)
   - [create_ingestion_job](#create_ingestion_job)
   - [list_ingestion_jobs](#list_ingestion_jobs)
@@ -938,6 +945,139 @@ or API directly with appropriate permissions.
 
 ---
 
+### execute_insert
+
+Execute INSERT statements to add new rows to tables in watsonx.data.
+
+**Category**: Query Execution
+
+**Parameters**:
+- `sql` (string, required): SQL INSERT statement to execute
+  - Must start with `INSERT`
+  - Single statement only (no semicolons separating multiple statements)
+- `catalog_name` (string, required): Target catalog (e.g., `"iceberg_data"`, `"hive_data"`)
+- `schema_name` (string, required): Default schema for unqualified table names
+- `engine_id` (string, required): Engine to run the query on (from `list_engines`, must be running)
+
+**Returns**:
+- `query_id` (string): Unique query identifier
+- `rows_inserted` (integer): Number of rows inserted (if available)
+- `execution_time_ms` (integer): Query duration in milliseconds
+- `status` (string): Execution status (`"success"`)
+- `catalog_name` (string): Echo of input catalog
+- `schema_name` (string): Echo of input schema
+
+**Safety Features**:
+- ✅ Only INSERT statements allowed
+- ❌ Rejects any query not starting with INSERT
+- ❌ Rejects multiple statements separated by semicolons
+- ⏱ 120-second execution timeout
+
+**Example Usage:**
+
+**Natural language:**
+```
+Insert a new customer record: id=9001, name='Alice Smith', email='alice@example.com', region='US-West'
+```
+
+**Claude executes:**
+```sql
+INSERT INTO iceberg_data.sales_db.customers (customer_id, name, email, region)
+VALUES (9001, 'Alice Smith', 'alice@example.com', 'US-West')
+```
+
+**Claude responds:**
+```
+✓ INSERT executed successfully
+
+Rows inserted: 1
+Query ID: q-20250101-001
+Execution time: 340ms
+```
+
+**Use Cases:**
+- Add new records to Iceberg tables
+- Populate staging tables for ETL pipelines
+- Seed reference/lookup tables
+- Append data during data migration
+
+**Best Practices:**
+- Use fully qualified table names: `catalog.schema.table`
+- Verify the target table exists with `describe_table` first
+- Keep INSERT batches reasonably sized to avoid timeouts
+- Prefer INSERT INTO ... SELECT for bulk loads
+
+---
+
+### execute_update
+
+Execute UPDATE statements to modify existing rows in tables in watsonx.data.
+
+**Category**: Query Execution
+
+**Parameters**:
+- `sql` (string, required): SQL UPDATE statement to execute
+  - Must start with `UPDATE`
+  - Single statement only (no semicolons separating multiple statements)
+- `catalog_name` (string, required): Target catalog (e.g., `"iceberg_data"`, `"hive_data"`)
+- `schema_name` (string, required): Default schema for unqualified table names
+- `engine_id` (string, required): Engine to run the query on (from `list_engines`, must be running)
+
+**Returns**:
+- `query_id` (string): Unique query identifier
+- `rows_updated` (integer): Number of rows updated (if available)
+- `execution_time_ms` (integer): Query duration in milliseconds
+- `status` (string): Execution status (`"success"`)
+- `catalog_name` (string): Echo of input catalog
+- `schema_name` (string): Echo of input schema
+
+**Safety Features**:
+- ✅ Only UPDATE statements allowed
+- ❌ Rejects any query not starting with UPDATE
+- ❌ Rejects multiple statements separated by semicolons
+- ⏱ 120-second execution timeout
+
+**Example Usage:**
+
+**Natural language:**
+```
+Update the email for customer 9001 to 'alice.smith@example.com'
+```
+
+**Claude executes:**
+```sql
+UPDATE iceberg_data.sales_db.customers
+SET email = 'alice.smith@example.com'
+WHERE customer_id = 9001
+```
+
+**Claude responds:**
+```
+✓ UPDATE executed successfully
+
+Rows updated: 1
+Query ID: q-20250101-002
+Execution time: 280ms
+```
+
+**Use Cases:**
+- Correct data entry mistakes
+- Apply bulk field changes with WHERE filters
+- Update status or flag columns
+- Synchronise data during migrations
+
+**Important Notes:**
+- UPDATE support requires Iceberg tables (not Hive/CSV)
+- Always include a WHERE clause to avoid unintended full-table updates
+- Check the row count in the response to confirm expected impact
+
+**Best Practices:**
+- Run a SELECT with the same WHERE clause first to preview affected rows
+- Use fully qualified table names: `catalog.schema.table`
+- Test with a narrow WHERE filter before broadening the scope
+
+---
+
 ### explain_query
 
 Get query execution plan without running the query to understand optimization and resource usage.
@@ -1065,6 +1205,209 @@ Performance Summary:
 - Compare with explain_query to see estimated vs actual
 - Look for high CPU time or data scanned
 - Use to validate optimization improvements
+
+---
+
+## Spark Application Tools
+
+Tools for submitting and managing Spark applications on watsonx.data Spark engines.
+
+### submit_spark_application
+
+Submit a Spark application for execution on a Spark engine.
+
+**Category**: Spark Application Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier (from `list_engines`)
+- `application` (string, required): Application file path — JAR, Python (.py), or R file
+- `arguments` (array of strings, optional): Command-line arguments passed to the application
+- `conf` (object, optional): Spark configuration properties (e.g., `{"spark.executor.memory": "2g"}`)
+- `env` (object, optional): Environment variables for the application
+- `name` (string, optional): Human-readable application name
+- `job_endpoint` (string, optional): External job endpoint URL
+- `service_instance_id` (string, optional): Service instance ID
+- `type` (string, optional): Application type — `"iae"` or `"emr"`
+- `volumes` (array of objects, optional): Volume mounts for data access
+
+**Returns**:
+- `application_id` (string): Unique application identifier
+- `state` (string): Initial application state (e.g., `"accepted"`, `"running"`)
+- Additional submission details from the API
+
+**Example Usage:**
+
+**Natural language:**
+```
+Submit the ETL job at s3://my-bucket/jobs/etl.py on spark-engine-01 with 4 executors
+```
+
+**Claude executes:**
+```
+submit_spark_application(
+  engine_id="spark-engine-01",
+  application="s3://my-bucket/jobs/etl.py",
+  conf={"spark.executor.instances": "4"},
+  name="ETL Job"
+)
+```
+
+**Claude responds:**
+```
+✓ Spark application submitted
+
+Application ID: app-20250101-abc123
+State: accepted
+Engine: spark-engine-01
+
+Use get_spark_application_status to monitor progress.
+```
+
+**Use Cases:**
+- Run ETL/ELT batch processing jobs
+- Execute data transformation pipelines
+- Run ML training workloads on Spark
+- Submit scheduled or on-demand Spark jobs
+
+**Best Practices:**
+- Always provide a `name` for easier identification
+- Use `conf` to tune executor memory/cores for large workloads
+- Store application files in accessible object storage (e.g., S3/COS)
+- Poll status with `get_spark_application_status` after submission
+
+---
+
+### list_spark_applications
+
+List Spark applications on a Spark engine, optionally filtered by state.
+
+**Category**: Spark Application Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+- `state` (array of strings, optional): Filter by application state
+  - Values: `"running"`, `"finished"`, `"failed"`, `"accepted"`, `"unknown"`
+  - Default: Returns all states
+
+**Returns**:
+- `applications` (array): List of application objects, each containing:
+  - `application_id` (string): Application identifier
+  - `state` (string): Current state
+  - `name` (string): Application name (if set)
+  - `start_time` (string): Submission timestamp
+  - Additional application metadata
+
+**Example Usage:**
+
+**Natural language:**
+```
+List all running Spark applications on spark-engine-01
+```
+
+**Claude responds:**
+```
+Running Spark Applications on spark-engine-01:
+
+| Application ID        | Name         | State   | Started             |
+|-----------------------|--------------|---------|---------------------|
+| app-20250101-abc123   | ETL Job      | running | 2025-01-01 10:05:00 |
+| app-20250101-def456   | ML Training  | running | 2025-01-01 10:12:00 |
+
+2 application(s) running.
+```
+
+**Use Cases:**
+- Monitor active workloads on an engine
+- Audit running jobs before pausing an engine
+- Identify failed jobs for troubleshooting
+- Check job history after batch processing
+
+---
+
+### get_spark_application_status
+
+Get detailed status of a specific Spark application.
+
+**Category**: Spark Application Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+- `application_id` (string, required): Application identifier (from `submit_spark_application` or `list_spark_applications`)
+
+**Returns**:
+- `application_id` (string): Application identifier
+- `state` (string): Current state (e.g., `"running"`, `"finished"`, `"failed"`)
+- `start_time` (string): Application start timestamp
+- `end_time` (string): End timestamp (if completed)
+- `spark_version` (string): Spark version used
+- `application_details` (object): Configuration and runtime details
+
+**Example Usage:**
+
+**Natural language:**
+```
+What is the status of Spark application app-20250101-abc123?
+```
+
+**Claude responds:**
+```
+Spark Application Status:
+
+Application ID: app-20250101-abc123
+State: finished
+Started:  2025-01-01 10:05:00
+Finished: 2025-01-01 10:18:42
+Duration: ~14 minutes
+Spark version: 3.3.0
+```
+
+**Use Cases:**
+- Poll for job completion in automated pipelines
+- Diagnose failed applications
+- Confirm a job completed before downstream processing
+- Audit execution details after job completion
+
+---
+
+### stop_spark_application
+
+Stop and remove a running Spark application.
+
+**Category**: Spark Application Management
+
+**Parameters**:
+- `engine_id` (string, required): Spark engine identifier
+- `application_id` (string, required): Application identifier to stop
+
+**Returns**:
+- Operation status from the API
+
+**Example Usage:**
+
+**Natural language:**
+```
+Stop Spark application app-20250101-abc123 on spark-engine-01
+```
+
+**Claude responds:**
+```
+✓ Spark application stopped
+
+Application ID: app-20250101-abc123
+Engine: spark-engine-01
+
+The application has been terminated and removed from the engine's history.
+```
+
+**Use Cases:**
+- Cancel a long-running or stuck job
+- Free up engine resources
+- Terminate jobs submitted with incorrect parameters
+
+**Important Notes:**
+- Stopping an application is irreversible — in-progress work will be lost
+- The application is removed from the engine's history after stopping
+- Use `get_spark_application_status` first to confirm the application is still running
 
 ---
 
@@ -1555,11 +1898,11 @@ Working across multiple tables:
 ### Security & Safety
 
 **Remember:**
-- All operations are read-only
-- No data modification possible
-- No DDL operations allowed
+- SELECT queries are read-only and safe for production use
+- `execute_insert` and `execute_update` modify data — use with care
+- DDL operations (create schema, rename table, add/rename columns) modify schema structure
 - No administrative commands
-- Safe for production use
+- Spark applications run with the permissions of the configured service credentials
 
 **Credentials:**
 - API keys are managed by server
