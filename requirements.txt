@@ -38,7 +38,7 @@ click==8.3.1
     #   uvicorn
 cloudpickle==3.1.2
     # via pydocket
-cryptography==46.0.5
+cryptography==46.0.6
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   authlib
