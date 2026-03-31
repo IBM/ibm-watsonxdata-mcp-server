@@ -10,6 +10,10 @@ Complete reference for all watsonx.data MCP tools.
   - [list_engines](#list_engines)
   - [create_spark_engine](#create_spark_engine)
   - [update_spark_engine](#update_spark_engine)
+  - [restart_presto_engine](#restart_presto_engine)
+  - [pause_presto_engine](#pause_presto_engine)
+  - [resume_presto_engine](#resume_presto_engine)
+  - [update_presto_engine](#update_presto_engine)
   - [pause_spark_engine](#pause_spark_engine)
   - [resume_spark_engine](#resume_spark_engine)
 - [Catalog Tools](#catalog-tools)
@@ -233,6 +237,131 @@ Update spark-prod engine description and add production tag
 ```
 
 **Note**: Spark engines do NOT support engine_restart parameter. Configuration changes may require manual restart.
+
+### restart_presto_engine
+
+Restart a Presto engine to apply configuration changes or recover from issues.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Presto engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `engine_type` (string): "presto"
+- `status` (string): "restarting"
+- `message` (string): Operation status message
+- `response` (object): API response details
+
+**Example Usage:**
+```
+Restart presto-01 engine to apply new configuration
+```
+
+**Use Cases:**
+- Apply configuration changes that require restart
+- Recover from engine issues or hung queries
+- Force refresh of engine state
+- Clear cached metadata
+
+**Important**: Engine will be unavailable during restart. Active queries will be terminated.
+
+---
+
+### pause_presto_engine
+
+Pause a running Presto engine to save resources while preserving configuration.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Presto engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `message` (string): Operation status message
+- `message_code` (string): Status code
+
+**Example Usage:**
+```
+Pause presto-dev during off-hours to save costs
+```
+
+**Use Cases:**
+- Stop engines during off-hours to reduce costs
+- Temporarily disable engines for maintenance
+- Preserve engine configuration without deletion
+- Free up resources for other workloads
+
+**Important**: Paused engines retain their configuration and can be resumed quickly. Active queries will be terminated.
+
+---
+
+### resume_presto_engine
+
+Resume a paused Presto engine to restore query processing capability.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Presto engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `message` (string): Operation status message
+- `message_code` (string): Status code
+
+**Example Usage:**
+```
+Resume presto-dev for morning workload
+```
+
+**Use Cases:**
+- Restore paused engines for active use
+- Resume engines after maintenance window
+- Bring engines back online after off-hours
+- Quick activation without reconfiguration
+
+**Important**: Engine will start with its previous configuration. May take a few minutes to become fully operational.
+
+---
+
+### update_presto_engine
+
+Update Presto engine configuration and settings, optionally triggering a restart.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `engine_id` (string, required): Presto engine identifier
+- `description` (string, optional): Updated description
+- `display_name` (string, optional): Updated display name
+- `engine_properties` (object, optional): Engine configuration properties to update
+- `engine_restart` (string, optional): Set to "force" to trigger restart after update
+- `remove_engine_properties` (list of strings, optional): Properties to remove
+- `tags` (array of strings, optional): Updated tags
+
+**Returns**:
+- Updated engine configuration object
+
+**Example Usage:**
+```
+Update presto-prod engine with new memory settings and force restart
+```
+
+**Use Cases:**
+- Modify engine configuration properties
+- Update engine metadata (name, description, tags)
+- Apply configuration changes with automatic restart
+- Remove deprecated configuration properties
+
+**Important**: 
+- Use `engine_restart="force"` to automatically restart after configuration changes
+- Some configuration changes require restart to take effect
+- Engine will be unavailable during restart if triggered
+
+---
 
 ---
 

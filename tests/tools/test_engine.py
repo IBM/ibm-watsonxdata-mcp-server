@@ -251,6 +251,147 @@ class TestListEngines:
         assert presto_route.called
 
 
+class TestRestartPrestoEngine:
+    """Tests for restart_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_restart_presto_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully restarting a Presto engine."""
+        from lakehouse_mcp.tools.engine.restart_presto_engine import restart_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/restart").mock(
+            return_value=httpx.Response(200, json={"status": "restarting"})
+        )
+
+        result = await restart_presto_engine.fn(mock_context, engine_id="presto-01")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["engine_type"] == "presto"
+        assert result["status"] == "restarting"
+        assert "message" in result
+
+    @pytest.mark.asyncio
+    async def test_restart_presto_engine_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test restarting non-existent Presto engine."""
+        from lakehouse_mcp.tools.engine.restart_presto_engine import restart_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/invalid/restart").mock(
+            return_value=httpx.Response(404, json={"error": "Engine not found"})
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await restart_presto_engine.fn(mock_context, engine_id="invalid")
+        
+        assert "Engine not found" in str(exc_info.value)
+
+
+class TestPausePrestoEngine:
+    """Tests for pause_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_pause_presto_engine_success(self, mock_context, respx_mock):
+        """Test successfully pausing a running Presto engine."""
+        from lakehouse_mcp.tools.engine.pause_presto_engine import pause_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/pause").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "response": {
+                        "message": "Pause Engine",
+                        "message_code": "Success",
+                    }
+                },
+            )
+        )
+
+        result = await pause_presto_engine.fn(mock_context, engine_id="presto-01")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["message"] == "Pause Engine"
+
+    @pytest.mark.asyncio
+    async def test_pause_presto_engine_error(self, mock_context, respx_mock):
+        """Test pausing Presto engine with API error."""
+        from lakehouse_mcp.tools.engine.pause_presto_engine import pause_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/pause").mock(
+            return_value=httpx.Response(500, json={"error": "Internal error"})
+        )
+
+        with pytest.raises(RuntimeError):
+            await pause_presto_engine.fn(mock_context, engine_id="presto-01")
+
+
+class TestResumePrestoEngine:
+    """Tests for resume_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_resume_presto_engine_success(self, mock_context, respx_mock):
+        """Test successfully resuming a paused Presto engine."""
+        from lakehouse_mcp.tools.engine.resume_presto_engine import resume_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/resume").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "message": "Success",
+                    "message_code": "success",
+                },
+            )
+        )
+
+        result = await resume_presto_engine.fn(mock_context, engine_id="presto-01")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["message"] == "Success"
+
+    @pytest.mark.asyncio
+    async def test_resume_presto_engine_error(self, mock_context, respx_mock):
+        """Test resuming Presto engine with API error."""
+        from lakehouse_mcp.tools.engine.resume_presto_engine import resume_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/resume").mock(
+            return_value=httpx.Response(500, json={"error": "Internal error"})
+        )
+
+        with pytest.raises(RuntimeError):
+            await resume_presto_engine.fn(mock_context, engine_id="presto-01")
+
+
+class TestUpdatePrestoEngine:
+    """Tests for update_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_update_presto_engine_description(self, mock_context, watsonx_client, respx_mock):
+        """Test updating Presto engine description."""
+        from lakehouse_mcp.tools.engine.update_presto_engine import update_presto_engine
+
+        respx_mock.patch("https://test.watsonx.com/api/v3/presto_engines/presto-01").mock(
+            return_value=httpx.Response(200, json={"engine_id": "presto-01", "description": "Updated description"})
+        )
+
+        result = await update_presto_engine.fn(mock_context, engine_id="presto-01", description="Updated description")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["description"] == "Updated description"
+
+    @pytest.mark.asyncio
+    async def test_update_presto_engine_with_restart(self, mock_context, watsonx_client, respx_mock):
+        """Test updating Presto engine with forced restart."""
+        from lakehouse_mcp.tools.engine.update_presto_engine import update_presto_engine
+
+        respx_mock.patch("https://test.watsonx.com/api/v3/presto_engines/presto-01").mock(
+            return_value=httpx.Response(200, json={"engine_id": "presto-01", "status": "restarting"})
+        )
+
+        result = await update_presto_engine.fn(
+            mock_context, engine_id="presto-01", display_name="New Name", engine_restart="force"
+        )
+
+        assert result["engine_id"] == "presto-01"
+
+
 class TestCreateSparkEngine:
     """Tests for create_spark_engine tool."""
 
