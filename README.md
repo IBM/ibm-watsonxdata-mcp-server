@@ -2,21 +2,36 @@
 
 ## Overview
 
-The IBM watsonx.data MCP Server enables AI assistants to interact seamlessly with IBM watsonx.data lakehouses using natural language. It exposes specialized tools for conversational data operations, including:
+The IBM watsonx.data MCP Server enables AI assistants to interact seamlessly with IBM watsonx.data lakehouses using natural language. It provides 30 specialized tools across 6 categories for comprehensive lakehouse operations:
 
-- Querying lakehouse data with SQL or natural language prompts
-- Exploring data catalogs and metadata
-- Inspecting table schemas and structures
-- Monitoring of engines
+- **Platform Management**: Instance status and configuration
+- **Engine Operations**: Manage and monitor Presto and Spark engines
+- **Catalog Management**: Browse schemas, tables, and metadata; modify table structures
+- **Query Execution**: Run SELECT, INSERT, UPDATE queries with query plan analysis
+- **Spark Applications**: Submit, monitor, and manage Spark jobs
+- **Data Ingestion**: Load data from object storage into lakehouse tables
 
 Currently, it supports stdio transport mechanism for local subprocess. For comprehensive details on transport options, including implementation guidelines and security best practices, refer to the [MCP Transports Specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 
 ## Supported Features
 
-- Tools: instance info, engine discovery, catalog browsing, table schemas, SQL execution
-- Read-only access (SELECT only, safety validation)
-- IBM Cloud IAM authentication & token refresh
-- Transport: stdio (now), Streamable HTTP (planned)
+### Core Capabilities
+- **30 Tools** organized into 6 functional categories (see [TOOLS.md](TOOLS.md))
+- **Platform Tools** (1): Instance details and status
+- **Engine Tools** (9): Lifecycle management for Presto and Spark engines
+- **Catalog Tools** (7): Schema and table discovery, metadata operations, DDL operations
+- **Query Tools** (5): SELECT, INSERT, UPDATE execution with query plan analysis
+- **Spark Application Tools** (4): Submit and manage Spark applications
+- **Ingestion Tools** (4): Data loading from object storage (CSV, Parquet, JSON)
+
+### Security & Authentication
+- IBM Cloud IAM authentication with automatic token refresh
+- Read and write operations with appropriate access controls
+
+### Transport & Integration
+- **Current**: stdio transport for local subprocess communication
+- **Planned**: Streamable HTTP transport for remote deployments
+- Compatible with Claude Desktop, IBM Bob, and other MCP-enabled AI assistants
 
 
 ## Architecture Overview
