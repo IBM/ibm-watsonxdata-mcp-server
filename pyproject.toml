@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     # MCP Framework
-    "fastmcp>=2.14.0",
+    "fastmcp>=3.2.0",
     # HTTP Client
     "httpx>=0.27.0",
     # Authentication
@@ -54,8 +54,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.48b0",
     "structlog>=24.0.0",
     "authlib>=1.6.9",
-    "pyjwt>=2.12.0",
-    "cryptography>=46.0.5",
+    "cryptography>=46.0.6",
 ]
 
 [project.optional-dependencies]

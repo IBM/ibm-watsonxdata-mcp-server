@@ -45,7 +45,7 @@ async def execute_select(
         - execution_time_ms: Query duration in milliseconds
         - catalog_name, schema_name: Echo of inputs
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Validate query is a SELECT statement
     sql_trimmed = sql.strip().upper()
@@ -92,6 +92,16 @@ async def execute_select(
 
     # Handle None response
     response = response or {}
+
+    # Check for HTTP-level API errors (not query execution errors)
+    # HTTP errors have status_code key, query errors are in response.data.stats.state
+    if response.get("error") and "status_code" in response:
+        logger.error("execute_select_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     # Response is nested under "data" key
     data = response.get("data", {}) or {}
@@ -142,13 +152,28 @@ async def execute_select(
         if state == "FAILED":
             error = response.get("error", {}) or {}
             error_message = error.get("message", "Unknown error")
-            raise RuntimeError(f"Query failed: {error_message}")
+            logger.error("query_failed", query_id=query_id, error=error_message)
+            return {
+                "error": True,
+                "error_message": f"Query failed: {error_message}",
+                "status_code": 0,
+            }
 
         if state == "CANCELED":
-            raise RuntimeError("Query was canceled")
+            logger.error("query_canceled", query_id=query_id)
+            return {
+                "error": True,
+                "error_message": "Query was canceled",
+                "status_code": 0,
+            }
 
         if elapsed_time >= max_wait_time:
-            raise TimeoutError(f"Query {query_id} did not complete within {max_wait_time} seconds")
+            logger.error("query_timeout", query_id=query_id, elapsed_time=elapsed_time)
+            return {
+                "error": True,
+                "error_message": f"Query {query_id} did not complete within {max_wait_time} seconds",
+                "status_code": 0,
+            }
 
         # Wait before polling
         await asyncio.sleep(poll_interval)
@@ -165,6 +190,16 @@ async def execute_select(
 
         response = await watsonx_client.post(path, poll_request_body)
         response = response or {}
+
+        # Check for API errors during polling
+        if response.get("error"):
+            logger.error("execute_select_polling_failed", error=response.get("error_message"))
+            return {
+                "error": True,
+                "error_message": response.get("error_message", "Unknown error"),
+                "status_code": response.get("status_code", 0),
+            }
+
         data = response.get("data", {}) or {}
 
         # Update state
@@ -179,7 +214,12 @@ async def execute_select(
         if state == "" and data.get("nextUri", "") == "" and len(data.get("columns", [])) == 0:
             empty_response_count += 1
             if empty_response_count >= 3:
-                raise RuntimeError(f"Query execution failed: received multiple empty responses. Query ID: {query_id}")
+                logger.error("query_empty_responses", query_id=query_id, count=empty_response_count)
+                return {
+                    "error": True,
+                    "error_message": f"Query execution failed: received multiple empty responses. Query ID: {query_id}",
+                    "status_code": 0,
+                }
         else:
             empty_response_count = 0
 

@@ -88,9 +88,9 @@ def mock_context(watsonx_client: WatsonXClient) -> Context:
         Mocked Context with watsonx_client dependency
     """
     context = Mock(spec=Context)
-    # FastMCP 2.x stores dependencies on mcp.dependencies, accessed via ctx.fastmcp.dependencies
+    # FastMCP 3.x stores dependencies as attributes on the FastMCP instance
     mock_fastmcp = Mock()
-    mock_fastmcp.dependencies = {"watsonx_client": watsonx_client}
+    mock_fastmcp.watsonx_client = watsonx_client
     context.fastmcp = mock_fastmcp
     return context
 

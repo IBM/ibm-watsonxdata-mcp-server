@@ -43,7 +43,7 @@ async def describe_table(
         - statistics: row_count, size_bytes, created_on, last_modified
         - engine_id: Echo of input
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "describing_table",
@@ -61,6 +61,15 @@ async def describe_table(
 
     # Handle None response
     response = response or {}
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("describe_table_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     # Extract table information
     table_info = response.get("table", response) or {}

@@ -31,7 +31,7 @@ async def list_ingestion_jobs(
     Returns:
         Dict with ingestion_jobs list containing job details
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Build query parameters into path
     path = "/v3/lhingestion/api/v1/ingestion/jobs"
@@ -52,6 +52,15 @@ async def list_ingestion_jobs(
     )
 
     response = await watsonx_client.get(path)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("list_ingestion_jobs_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     job_count = len(response.get("ingestion_jobs", []))
     logger.info(

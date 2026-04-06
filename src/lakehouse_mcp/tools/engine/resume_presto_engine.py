@@ -26,26 +26,31 @@ async def resume_presto_engine(ctx: Context, engine_id: str) -> dict[str, Any]:
     Returns:
         Dict with resume operation status and engine state transition
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info("resuming_presto_engine", engine_id=engine_id)
 
-    try:
-        # Resume the engine (empty POST request)
-        path = f"/v3/presto_engines/{engine_id}/resume"
-        response = await watsonx_client.post(path, {})
+    # Resume the engine (empty POST request)
+    path = f"/v3/presto_engines/{engine_id}/resume"
+    response = await watsonx_client.post(path, {})
 
-        # Build result from API response
-        result = {
-            "message": response.get("message", "Success"),
-            "message_code": response.get("message_code", "success"),
-            "engine_id": engine_id,
+    # Check for API errors
+    if response.get("error"):
+        logger.error("resume_presto_engine_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
         }
 
-        logger.info("presto_engine_resumed", engine_id=engine_id)
+    # Build result from API response
+    result = {
+        "message": response.get("message", "Success"),
+        "message_code": response.get("message_code", "success"),
+        "engine_id": engine_id,
+    }
 
-        return result
+    logger.info("presto_engine_resumed", engine_id=engine_id)
 
-    except Exception as e:
-        logger.error("resume_presto_engine_error", engine_id=engine_id, error=str(e))
-        raise
+    return result
+

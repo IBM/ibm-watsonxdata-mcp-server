@@ -40,7 +40,7 @@ async def add_columns(
         - columns: List of added column details
         - total_count: Number of columns added
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "adding_columns",
@@ -51,34 +51,38 @@ async def add_columns(
         engine_id=engine_id,
     )
 
-    try:
-        # Build request body
-        body = {
-            "columns": columns,
-        }
+    # Build request body
+    body = {
+        "columns": columns,
+    }
 
-        # Build API path
-        path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}/columns?engine_id={engine_id}"
+    # Build API path
+    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}/columns?engine_id={engine_id}"
 
-        # Make API call
-        response = await watsonx_client.post(path, body)
-        
-        logger.info(
-            "columns_added",
-            catalog_name=catalog_name,
-            schema_name=schema_name,
-            table_name=table_name,
-            column_count=len(columns),
-        )
-
-        return response or {}
-
-    except Exception as e:
+    # Make API call
+    response = await watsonx_client.post(path, body)
+    
+    # Check for API errors
+    if response.get("error"):
         logger.error(
             "add_columns_failed",
             catalog_name=catalog_name,
             schema_name=schema_name,
             table_name=table_name,
-            error=str(e),
+            error=response.get("error_message"),
         )
-        raise
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+    
+    logger.info(
+        "columns_added",
+        catalog_name=catalog_name,
+        schema_name=schema_name,
+        table_name=table_name,
+        column_count=len(columns),
+    )
+
+    return response or {}

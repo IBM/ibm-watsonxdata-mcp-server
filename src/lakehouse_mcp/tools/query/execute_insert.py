@@ -42,7 +42,7 @@ async def execute_insert(
         - status: Query execution status
         - catalog_name, schema_name: Echo of inputs
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Validate SQL is not empty
     if not sql or not sql.strip():
@@ -85,6 +85,16 @@ async def execute_insert(
     # Handle None response
     response = response or {}
 
+    # Check for HTTP-level API errors (not query execution errors)
+    # HTTP errors have status_code key, query errors are in response.data.stats.state
+    if response.get("error") and "status_code" in response:
+        logger.error("execute_insert_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+
     # Response is nested under "data" key
     data = response.get("data", {}) or {}
     query_id = data.get("id")
@@ -124,13 +134,28 @@ async def execute_insert(
         if state == "FAILED":
             error = response.get("error", {}) or {}
             error_message = error.get("message", "Unknown error")
-            raise RuntimeError(f"INSERT query failed: {error_message}")
+            logger.error("insert_query_failed", query_id=query_id, error=error_message)
+            return {
+                "error": True,
+                "error_message": f"INSERT query failed: {error_message}",
+                "status_code": 0,
+            }
 
         if state == "CANCELED":
-            raise RuntimeError("INSERT query was canceled")
+            logger.error("insert_query_canceled", query_id=query_id)
+            return {
+                "error": True,
+                "error_message": "INSERT query was canceled",
+                "status_code": 0,
+            }
 
         if elapsed_time >= max_wait_time:
-            raise TimeoutError(f"INSERT query {query_id} did not complete within {max_wait_time} seconds")
+            logger.error("insert_query_timeout", query_id=query_id, elapsed_time=elapsed_time)
+            return {
+                "error": True,
+                "error_message": f"INSERT query {query_id} did not complete within {max_wait_time} seconds",
+                "status_code": 0,
+            }
 
         # Wait before polling
         await asyncio.sleep(poll_interval)
@@ -146,6 +171,16 @@ async def execute_insert(
 
         response = await watsonx_client.post(path, poll_request_body)
         response = response or {}
+
+        # Check for API errors during polling
+        if response.get("error"):
+            logger.error("execute_insert_polling_failed", error=response.get("error_message"))
+            return {
+                "error": True,
+                "error_message": response.get("error_message", "Unknown error"),
+                "status_code": response.get("status_code", 0),
+            }
+
         data = response.get("data", {}) or {}
 
         # Update state
@@ -160,7 +195,12 @@ async def execute_insert(
         if state == "" and data.get("nextUri", "") == "":
             empty_response_count += 1
             if empty_response_count >= 3:
-                raise RuntimeError(f"INSERT query execution failed: received multiple empty responses. Query ID: {query_id}")
+                logger.error("insert_query_empty_responses", query_id=query_id, count=empty_response_count)
+                return {
+                    "error": True,
+                    "error_message": f"INSERT query execution failed: received multiple empty responses. Query ID: {query_id}",
+                    "status_code": 0,
+                }
         else:
             empty_response_count = 0
 
@@ -195,3 +235,4 @@ async def execute_insert(
     )
 
     return result
+

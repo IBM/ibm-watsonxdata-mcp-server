@@ -122,9 +122,23 @@ class WatsonXClient:
                     error_data = response.json()
                     error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
                     logger.error("watsonx_get_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
-                    raise RuntimeError(f"API Error: {error_msg}\nFull response: {error_data}")
+                    
+                    # Return error as data instead of raising exception
+                    # This allows tools to handle errors gracefully
+                    return {
+                        "error": True,
+                        "error_message": error_msg,
+                        "error_details": error_data,
+                        "status_code": response.status_code,
+                    }
                 except (ValueError, KeyError):
-                    response.raise_for_status()
+                    # If we can't parse JSON, return a generic error response
+                    logger.error("watsonx_get_error_no_json", url=url, status_code=response.status_code)
+                    return {
+                        "error": True,
+                        "error_message": f"HTTP {response.status_code}: {response.reason_phrase}",
+                        "status_code": response.status_code,
+                    }
 
             data = response.json()
 
@@ -177,11 +191,20 @@ class WatsonXClient:
                     error_data = response.json()
                     error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
                     logger.error("watsonx_post_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
-                    # Raise with full error details in the message
-                    raise RuntimeError(f"API Error: {error_msg}\nFull response: {error_data}")
+                    return {
+                        "error": True,
+                        "error_message": error_msg,
+                        "error_details": error_data,
+                        "status_code": response.status_code,
+                    }
                 except (ValueError, KeyError):
-                    # If we can't parse JSON, use default error handling
-                    response.raise_for_status()
+                    # If we can't parse JSON, return basic error
+                    logger.error("watsonx_post_error_no_json", url=url, status_code=response.status_code)
+                    return {
+                        "error": True,
+                        "error_message": f"HTTP {response.status_code}: {response.reason_phrase}",
+                        "status_code": response.status_code,
+                    }
             
             data = response.json()
 
@@ -192,6 +215,7 @@ class WatsonXClient:
             )
 
             return data
+
 
     async def patch(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         """Perform PATCH request to watsonx.data API.
@@ -242,9 +266,19 @@ class WatsonXClient:
                     error_data = response.json()
                     error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
                     logger.error("watsonx_patch_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
-                    raise RuntimeError(f"API Error: {error_msg}\nFull response: {error_data}")
+                    return {
+                        "error": True,
+                        "error_message": error_msg,
+                        "error_details": error_data,
+                        "status_code": response.status_code,
+                    }
                 except (ValueError, KeyError):
-                    response.raise_for_status()
+                    logger.error("watsonx_patch_error_no_json", url=url, status_code=response.status_code)
+                    return {
+                        "error": True,
+                        "error_message": f"HTTP {response.status_code}: {response.reason_phrase}",
+                        "status_code": response.status_code,
+                    }
 
             data = response.json()
 
@@ -301,9 +335,19 @@ class WatsonXClient:
                     error_data = response.json()
                     error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
                     logger.error("watsonx_delete_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
-                    raise RuntimeError(f"API Error: {error_msg}\nFull response: {error_data}")
+                    return {
+                        "error": True,
+                        "error_message": error_msg,
+                        "error_details": error_data,
+                        "status_code": response.status_code,
+                    }
                 except (ValueError, KeyError):
-                    response.raise_for_status()
+                    logger.error("watsonx_delete_error_no_json", url=url, status_code=response.status_code)
+                    return {
+                        "error": True,
+                        "error_message": f"HTTP {response.status_code}: {response.reason_phrase}",
+                        "status_code": response.status_code,
+                    }
 
             # Handle 204 No Content responses
             if response.status_code == 204:

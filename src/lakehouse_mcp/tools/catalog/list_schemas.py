@@ -35,7 +35,7 @@ async def list_schemas(
         - total_count: Number of schemas found
         - catalog_name, engine_id: Echo of inputs
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "listing_schemas",
@@ -51,6 +51,15 @@ async def list_schemas(
 
     # Handle None response
     response = response or {}
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("list_schemas_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     # Log raw response for debugging
     logger.debug("raw_api_response", response_keys=list(response.keys()))

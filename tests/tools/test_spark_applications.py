@@ -34,7 +34,7 @@ class TestSubmitSparkApplication:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await submit_spark_application.fn(
+        result = await submit_spark_application(
             mock_context,
             engine_id="spark-01",
             application="s3://bucket/my-app.jar",
@@ -63,7 +63,7 @@ class TestSubmitSparkApplication:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await submit_spark_application.fn(
+        result = await submit_spark_application(
             mock_context,
             engine_id="spark-01",
             application="s3://bucket/my-app.py",
@@ -98,7 +98,7 @@ class TestSubmitSparkApplication:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await submit_spark_application.fn(
+        result = await submit_spark_application(
             mock_context,
             engine_id="spark-01",
             application="local:///app/my-app.jar",
@@ -147,7 +147,7 @@ class TestListSparkApplications:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_spark_applications.fn(
+        result = await list_spark_applications(
             mock_context,
             engine_id="spark-01",
         )
@@ -181,7 +181,7 @@ class TestListSparkApplications:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_spark_applications.fn(
+        result = await list_spark_applications(
             mock_context,
             engine_id="spark-01",
             state=["running"],
@@ -204,7 +204,7 @@ class TestListSparkApplications:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_spark_applications.fn(
+        result = await list_spark_applications(
             mock_context,
             engine_id="spark-01",
         )
@@ -241,7 +241,7 @@ class TestGetSparkApplicationStatus:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_spark_application_status.fn(
+        result = await get_spark_application_status(
             mock_context,
             engine_id="spark-01",
             application_id="app-123",
@@ -275,7 +275,7 @@ class TestGetSparkApplicationStatus:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_spark_application_status.fn(
+        result = await get_spark_application_status(
             mock_context,
             engine_id="spark-01",
             application_id="app-456",
@@ -306,7 +306,7 @@ class TestGetSparkApplicationStatus:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_spark_application_status.fn(
+        result = await get_spark_application_status(
             mock_context,
             engine_id="spark-01",
             application_id="app-789",
@@ -336,7 +336,7 @@ class TestStopSparkApplication:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await stop_spark_application.fn(
+        result = await stop_spark_application(
             mock_context,
             engine_id="spark-01",
             application_id="app-123",
@@ -360,7 +360,7 @@ class TestStopSparkApplication:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await stop_spark_application.fn(
+        result = await stop_spark_application(
             mock_context,
             engine_id="spark-01",
             application_id="app-running",
@@ -377,12 +377,15 @@ class TestStopSparkApplication:
     ):
         """Test stopping a non-existent Spark application."""
         respx_mock.delete("https://test.watsonx.com/api/v3/spark_engines/spark-01/applications/app-nonexistent").mock(
-            return_value=httpx.Response(404, json={"error": "Application not found"})
+            return_value=httpx.Response(404, json={"message": "Application not found"})
         )
 
-        with pytest.raises(Exception):
-            await stop_spark_application.fn(
-                mock_context,
-                engine_id="spark-01",
-                application_id="app-nonexistent",
-            )
+        result = await stop_spark_application(
+            mock_context,
+            engine_id="spark-01",
+            application_id="app-nonexistent",
+        )
+        
+        assert result["error"] is True
+        assert "Application not found" in result["error_message"]
+        assert result["status_code"] == 404

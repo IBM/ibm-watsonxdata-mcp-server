@@ -31,7 +31,7 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
         - public_endpoints_enabled: Public internet access enabled
         - console_url: Web console URL
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info("getting_instance_details")
 
@@ -40,6 +40,15 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
 
     # Handle None response
     response = response or {}
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("get_instance_details_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     # Log raw response for debugging
     logger.debug("raw_api_response", response_keys=list(response.keys()))
