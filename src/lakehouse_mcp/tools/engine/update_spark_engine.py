@@ -41,7 +41,7 @@ async def update_spark_engine(
         Spark engines do NOT support engine_restart parameter.
         Configuration changes may require manual restart.
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Build request body with only provided parameters
     body: dict[str, Any] = {}
@@ -62,6 +62,15 @@ async def update_spark_engine(
 
     path = f"/v3/spark_engines/{engine_id}"
     response = await watsonx_client.patch(path, body)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("update_spark_engine_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     logger.info(
         "spark_engine_updated",

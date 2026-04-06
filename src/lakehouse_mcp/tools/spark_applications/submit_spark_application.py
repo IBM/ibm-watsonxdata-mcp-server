@@ -47,7 +47,7 @@ async def submit_spark_application(
     Returns:
         Dict with application_id, state, and submission details
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Build application_details object
     application_details: dict[str, Any] = {
@@ -84,6 +84,15 @@ async def submit_spark_application(
 
     path = f"/v3/spark_engines/{engine_id}/applications"
     response = await watsonx_client.post(path, body)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("submit_spark_application_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     logger.info(
         "spark_application_submitted",

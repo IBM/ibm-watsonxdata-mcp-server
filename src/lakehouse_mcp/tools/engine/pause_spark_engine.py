@@ -31,34 +31,34 @@ async def pause_spark_engine(
     Returns:
         Dict with pause operation status
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info("pausing_spark_engine", engine_id=engine_id, force=force)
 
-    try:
-        # Build request body
-        body = {"force": force}
+    # Build request body
+    body = {"force": force}
 
-        # Pause the engine
-        path = f"/v3/spark_engines/{engine_id}/pause"
-        response = await watsonx_client.post(path, body)
+    # Pause the engine
+    path = f"/v3/spark_engines/{engine_id}/pause"
+    response = await watsonx_client.post(path, body)
 
-        # Build result from API response
-        result = {
-            "message": response.get("message", "pause spark engine"),
-            "message_code": response.get("message_code", "success"),
-            "engine_id": engine_id,
-            "forced": force,
+    # Check for API errors
+    if response.get("error"):
+        logger.error("pause_spark_engine_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
         }
 
-        logger.info("spark_engine_paused", engine_id=engine_id, force=force)
+    # Build result from API response
+    result = {
+        "message": response.get("message", "pause spark engine"),
+        "message_code": response.get("message_code", "success"),
+        "engine_id": engine_id,
+        "forced": force,
+    }
 
-        return result
+    logger.info("spark_engine_paused", engine_id=engine_id, force=force)
 
-    except ValueError as e:
-        logger.error("pause_spark_engine_validation_error", engine_id=engine_id, error=str(e))
-        raise
-
-    except Exception as e:
-        logger.error("pause_spark_engine_error", engine_id=engine_id, error=str(e))
-        raise
+    return result

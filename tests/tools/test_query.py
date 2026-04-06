@@ -36,7 +36,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT id, name, total FROM customers",
             catalog_name="iceberg_data",
@@ -68,7 +68,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        await execute_select.fn(
+        await execute_select(
             mock_context,
             sql="SELECT * FROM customers",
             catalog_name="iceberg_data",
@@ -98,7 +98,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        await execute_select.fn(
+        await execute_select(
             mock_context,
             sql="SELECT * FROM customers",
             catalog_name="iceberg_data",
@@ -127,7 +127,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        await execute_select.fn(
+        await execute_select(
             mock_context,
             sql="SELECT * FROM customers LIMIT 5",
             catalog_name="iceberg_data",
@@ -156,7 +156,7 @@ class TestExecuteSelect:
 
         for query in invalid_queries:
             with pytest.raises(ValueError) as exc_info:
-                await execute_select.fn(
+                await execute_select(
                     mock_context,
                     sql=query,
                     catalog_name="iceberg_data",
@@ -172,7 +172,7 @@ class TestExecuteSelect:
         query = "SELECT * FROM customers; DROP TABLE customers;"
 
         with pytest.raises(ValueError) as exc_info:
-            await execute_select.fn(
+            await execute_select(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -200,7 +200,7 @@ class TestExecuteSelect:
         )
 
         # Should not raise an error
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT * FROM customers;",
             catalog_name="iceberg_data",
@@ -234,7 +234,7 @@ class TestExecuteSelect:
             "SeLeCt * FROM customers",
             "  SELECT * FROM customers",
         ]:
-            result = await execute_select.fn(
+            result = await execute_select(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -263,7 +263,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT id, name FROM customers WHERE id = -1",
             catalog_name="iceberg_data",
@@ -296,7 +296,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT * FROM customers",
             catalog_name="iceberg_data",
@@ -344,7 +344,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql=query,
             catalog_name="iceberg_data",
@@ -386,7 +386,7 @@ class TestExecuteSelect:
             httpx.Response(200, json=finished_response),
         ]
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT * FROM customers",
             catalog_name="iceberg_data",
@@ -433,7 +433,7 @@ class TestExecuteSelect:
             httpx.Response(200, json=finished_response),
         ]
 
-        result = await execute_select.fn(
+        result = await execute_select(
             mock_context,
             sql="SELECT id, name FROM customers",
             catalog_name="iceberg_data",
@@ -450,37 +450,39 @@ class TestExecuteSelect:
     async def test_execute_select_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test query execution with API error."""
         respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
-            return_value=httpx.Response(400, json={"error": "Syntax error in query"})
+            return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_select.fn(
-                mock_context,
-                sql="SELECT * FROM nonexistent_table",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_select(
+            mock_context,
+            sql="SELECT * FROM nonexistent_table",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Syntax error in query" in result["error_message"]
+        assert result["status_code"] == 400
 
     @pytest.mark.asyncio
     async def test_execute_select_engine_not_running(self, mock_context, watsonx_client, respx_mock):
         """Test query execution when engine is not running."""
         respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
-            return_value=httpx.Response(400, json={"error": "Engine presto-01 is not running"})
+            return_value=httpx.Response(400, json={"message": "Engine presto-01 is not running"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_select.fn(
-                mock_context,
-                sql="SELECT 1",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_select(
+            mock_context,
+            sql="SELECT 1",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Engine presto-01 is not running" in result["error_message"]
+        assert result["status_code"] == 400
 
     @pytest.mark.asyncio
     async def test_execute_select_timeout(self, mock_context, watsonx_client, respx_mock):
@@ -490,7 +492,7 @@ class TestExecuteSelect:
         )
 
         with pytest.raises(httpx.TimeoutException):
-            await execute_select.fn(
+            await execute_select(
                 mock_context,
                 sql="SELECT * FROM large_table",
                 catalog_name="iceberg_data",
@@ -515,7 +517,7 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        await execute_select.fn(
+        await execute_select(
             mock_context,
             sql="SELECT * FROM customers;",
             catalog_name="iceberg_data",
@@ -546,17 +548,17 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_select.fn(
-                mock_context,
-                sql="SELECT * FROM nonexistent",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_select(
+            mock_context,
+            sql="SELECT * FROM nonexistent",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "Query failed" in str(exc_info.value)
-        assert "Table does not exist" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Query failed" in result["error_message"]
+        assert "Table does not exist" in result["error_message"]
 
     @pytest.mark.asyncio
     async def test_execute_select_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -573,16 +575,17 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_select.fn(
-                mock_context,
-                sql="SELECT * FROM customers",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_select(
+            mock_context,
+            sql="SELECT * FROM customers",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "Query was canceled" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Query was canceled" in result["error_message"]
+
 
 
 class TestExecuteInsert:
@@ -604,7 +607,7 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_insert.fn(
+        result = await execute_insert(
             mock_context,
             sql="INSERT INTO customers (id, name) VALUES (1, 'Alice'), (2, 'Bob'), (3, 'Charlie')",
             catalog_name="iceberg_data",
@@ -632,7 +635,7 @@ class TestExecuteInsert:
 
         for query in invalid_queries:
             with pytest.raises(ValueError) as exc_info:
-                await execute_insert.fn(
+                await execute_insert(
                     mock_context,
                     sql=query,
                     catalog_name="iceberg_data",
@@ -648,7 +651,7 @@ class TestExecuteInsert:
         query = "INSERT INTO customers VALUES (1, 'test'); DROP TABLE customers;"
 
         with pytest.raises(ValueError) as exc_info:
-            await execute_insert.fn(
+            await execute_insert(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -674,7 +677,7 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_insert.fn(
+        result = await execute_insert(
             mock_context,
             sql="INSERT INTO customers (id, name) VALUES (1, 'Test');",
             catalog_name="iceberg_data",
@@ -705,7 +708,7 @@ class TestExecuteInsert:
             "INSERT INTO customers VALUES (1, 'test')",
             "InSeRt INTO customers VALUES (1, 'test')",
         ]:
-            result = await execute_insert.fn(
+            result = await execute_insert(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -718,7 +721,7 @@ class TestExecuteInsert:
     async def test_execute_insert_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
         with pytest.raises(ValueError) as exc_info:
-            await execute_insert.fn(
+            await execute_insert(
                 mock_context,
                 sql="",
                 catalog_name="iceberg_data",
@@ -754,7 +757,7 @@ class TestExecuteInsert:
             httpx.Response(200, json=finished_response),
         ]
 
-        result = await execute_insert.fn(
+        result = await execute_insert(
             mock_context,
             sql="INSERT INTO customers SELECT * FROM temp_customers",
             catalog_name="iceberg_data",
@@ -781,17 +784,17 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_insert.fn(
-                mock_context,
-                sql="INSERT INTO nonexistent VALUES (1, 'test')",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_insert(
+            mock_context,
+            sql="INSERT INTO nonexistent VALUES (1, 'test')",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "INSERT query failed" in str(exc_info.value)
-        assert "Table does not exist" in str(exc_info.value)
+        assert result["error"] is True
+        assert "INSERT query failed" in result["error_message"]
+        assert "Table does not exist" in result["error_message"]
 
     @pytest.mark.asyncio
     async def test_execute_insert_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -808,34 +811,35 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_insert.fn(
-                mock_context,
-                sql="INSERT INTO customers VALUES (1, 'test')",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_insert(
+            mock_context,
+            sql="INSERT INTO customers VALUES (1, 'test')",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "INSERT query was canceled" in str(exc_info.value)
+        assert result["error"] is True
+        assert "INSERT query was canceled" in result["error_message"]
 
     @pytest.mark.asyncio
     async def test_execute_insert_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test INSERT execution with API error."""
         respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
-            return_value=httpx.Response(400, json={"error": "Syntax error in query"})
+            return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_insert.fn(
-                mock_context,
-                sql="INSERT INTO customers VALUES (1, 'test')",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_insert(
+            mock_context,
+            sql="INSERT INTO customers VALUES (1, 'test')",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Syntax error in query" in result["error_message"]
+        assert result["status_code"] == 400
 
 
 class TestExecuteUpdate:
@@ -857,7 +861,7 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_update.fn(
+        result = await execute_update(
             mock_context,
             sql="UPDATE customers SET status = 'active' WHERE id > 100",
             catalog_name="iceberg_data",
@@ -885,7 +889,7 @@ class TestExecuteUpdate:
 
         for query in invalid_queries:
             with pytest.raises(ValueError) as exc_info:
-                await execute_update.fn(
+                await execute_update(
                     mock_context,
                     sql=query,
                     catalog_name="iceberg_data",
@@ -901,7 +905,7 @@ class TestExecuteUpdate:
         query = "UPDATE customers SET name = 'test'; DROP TABLE customers;"
 
         with pytest.raises(ValueError) as exc_info:
-            await execute_update.fn(
+            await execute_update(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -927,7 +931,7 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_update.fn(
+        result = await execute_update(
             mock_context,
             sql="UPDATE customers SET name = 'Test' WHERE id = 1;",
             catalog_name="iceberg_data",
@@ -958,7 +962,7 @@ class TestExecuteUpdate:
             "UPDATE customers SET name = 'test' WHERE id = 1",
             "UpDaTe customers SET name = 'test' WHERE id = 1",
         ]:
-            result = await execute_update.fn(
+            result = await execute_update(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -971,7 +975,7 @@ class TestExecuteUpdate:
     async def test_execute_update_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
         with pytest.raises(ValueError) as exc_info:
-            await execute_update.fn(
+            await execute_update(
                 mock_context,
                 sql="",
                 catalog_name="iceberg_data",
@@ -1007,7 +1011,7 @@ class TestExecuteUpdate:
             httpx.Response(200, json=finished_response),
         ]
 
-        result = await execute_update.fn(
+        result = await execute_update(
             mock_context,
             sql="UPDATE customers SET status = 'inactive' WHERE last_login < '2020-01-01'",
             catalog_name="iceberg_data",
@@ -1034,17 +1038,17 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_update.fn(
-                mock_context,
-                sql="UPDATE customers SET nonexistent_column = 'test'",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_update(
+            mock_context,
+            sql="UPDATE customers SET nonexistent_column = 'test'",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "UPDATE query failed" in str(exc_info.value)
-        assert "Column does not exist" in str(exc_info.value)
+        assert result["error"] is True
+        assert "UPDATE query failed" in result["error_message"]
+        assert "Column does not exist" in result["error_message"]
 
     @pytest.mark.asyncio
     async def test_execute_update_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -1061,34 +1065,35 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_update.fn(
-                mock_context,
-                sql="UPDATE customers SET name = 'test'",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_update(
+            mock_context,
+            sql="UPDATE customers SET name = 'test'",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "UPDATE query was canceled" in str(exc_info.value)
+        assert result["error"] is True
+        assert "UPDATE query was canceled" in result["error_message"]
 
     @pytest.mark.asyncio
     async def test_execute_update_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test UPDATE execution with API error."""
         respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01").mock(
-            return_value=httpx.Response(400, json={"error": "Syntax error in query"})
+            return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await execute_update.fn(
-                mock_context,
-                sql="UPDATE customers SET name = 'test'",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_update(
+            mock_context,
+            sql="UPDATE customers SET name = 'test'",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Syntax error in query" in result["error_message"]
+        assert result["status_code"] == 400
 
     @pytest.mark.asyncio
     async def test_execute_update_zero_rows_updated(self, mock_context, watsonx_client, respx_mock):
@@ -1106,7 +1111,7 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await execute_update.fn(
+        result = await execute_update(
             mock_context,
             sql="UPDATE customers SET name = 'test' WHERE id = -999",
             catalog_name="iceberg_data",
@@ -1116,8 +1121,6 @@ class TestExecuteUpdate:
 
         assert result["rows_updated"] == 0
         assert result["status"] == "success"
-
-
 
 
 class TestExplainQuery:
@@ -1136,7 +1139,7 @@ class TestExplainQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_query.fn(
+        result = await explain_query(
             mock_context,
             engine_id="presto-01",
             statement="SELECT id, name FROM customers",
@@ -1161,7 +1164,7 @@ class TestExplainQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_query.fn(
+        result = await explain_query(
             mock_context,
             engine_id="prestissimo-01",
             statement="SELECT id, name FROM customers",
@@ -1185,7 +1188,7 @@ class TestExplainQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_query.fn(
+        result = await explain_query(
             mock_context,
             engine_id="presto-01",
             statement="SELECT * FROM customers",
@@ -1211,7 +1214,7 @@ class TestExplainQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_query.fn(
+        result = await explain_query(
             mock_context,
             engine_id="presto-01",
             statement="SELECT * FROM customers",
@@ -1230,7 +1233,7 @@ class TestExplainQuery:
         from lakehouse_mcp.tools.query.explain_query import explain_query
 
         with pytest.raises(ValueError) as exc_info:
-            await explain_query.fn(
+            await explain_query(
                 mock_context,
                 engine_id="spark-01",
                 statement="SELECT * FROM customers",
@@ -1246,18 +1249,19 @@ class TestExplainQuery:
         from lakehouse_mcp.tools.query.explain_query import explain_query
 
         respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain").mock(
-            return_value=httpx.Response(400, json={"error": "Invalid SQL syntax"})
+            return_value=httpx.Response(400, json={"message": "Invalid SQL syntax"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await explain_query.fn(
-                mock_context,
-                engine_id="presto-01",
-                statement="SELECT * FORM customers",  # Typo: FORM instead of FROM
-                engine_type="presto",
-            )
+        result = await explain_query(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT * FORM customers",  # Typo: FORM instead of FROM
+            engine_type="presto",
+        )
         
-        assert "Invalid SQL syntax" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Invalid SQL syntax" in result["error_message"]
+        assert result["status_code"] == 400
 
 
 class TestExplainAnalyzeQuery:
@@ -1276,7 +1280,7 @@ class TestExplainAnalyzeQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_analyze_query.fn(
+        result = await explain_analyze_query(
             mock_context,
             engine_id="presto-01",
             statement="SELECT id, name FROM customers",
@@ -1301,7 +1305,7 @@ class TestExplainAnalyzeQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_analyze_query.fn(
+        result = await explain_analyze_query(
             mock_context,
             engine_id="prestissimo-01",
             statement="SELECT id, name FROM customers",
@@ -1325,7 +1329,7 @@ class TestExplainAnalyzeQuery:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await explain_analyze_query.fn(
+        result = await explain_analyze_query(
             mock_context,
             engine_id="presto-01",
             statement="SELECT * FROM customers",
@@ -1344,7 +1348,7 @@ class TestExplainAnalyzeQuery:
         from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
 
         with pytest.raises(ValueError) as exc_info:
-            await explain_analyze_query.fn(
+            await explain_analyze_query(
                 mock_context,
                 engine_id="spark-01",
                 statement="SELECT * FROM customers",
@@ -1360,15 +1364,16 @@ class TestExplainAnalyzeQuery:
         from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
 
         respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/query_explain_analyze").mock(
-            return_value=httpx.Response(400, json={"error": "Query execution failed"})
+            return_value=httpx.Response(400, json={"message": "Query execution failed"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await explain_analyze_query.fn(
-                mock_context,
-                engine_id="presto-01",
-                statement="SELECT * FROM customers",
-                engine_type="presto",
-            )
+        result = await explain_analyze_query(
+            mock_context,
+            engine_id="presto-01",
+            statement="SELECT * FROM nonexistent_table",
+            engine_type="presto",
+        )
         
-        assert "Query execution failed" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Query execution failed" in result["error_message"]
+        assert result["status_code"] == 400

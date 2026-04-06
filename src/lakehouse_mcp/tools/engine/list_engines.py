@@ -30,7 +30,7 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
           created_on, created_by, associated_catalogs
         - summary: Counts by type and status (total_count, presto_count, spark_count, by_status)
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Validate engine_type
     if engine_type and engine_type not in ("presto", "spark"):
@@ -59,8 +59,29 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
 
     # Extract engine lists (handle different response structures)
     # Handle None responses from API
-    presto_engines = (presto_response or {}).get("presto_engines", []) or []
-    spark_engines = (spark_response or {}).get("spark_engines", []) or []
+    presto_response = presto_response or {}
+    spark_response = spark_response or {}
+    
+    # Check for API errors in presto response
+    if presto_response.get("error"):
+        logger.error("list_presto_engines_failed", error=presto_response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": presto_response.get("error_message", "Unknown error"),
+            "status_code": presto_response.get("status_code", 0),
+        }
+    
+    # Check for API errors in spark response
+    if spark_response.get("error"):
+        logger.error("list_spark_engines_failed", error=spark_response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": spark_response.get("error_message", "Unknown error"),
+            "status_code": spark_response.get("status_code", 0),
+        }
+    
+    presto_engines = presto_response.get("presto_engines", []) or []
+    spark_engines = spark_response.get("spark_engines", []) or []
 
     # Build enhanced unified engine list
     all_engines = []

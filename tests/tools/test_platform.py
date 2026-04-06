@@ -18,7 +18,7 @@ class TestGetInstanceDetails:
         """Test successful instance details retrieval."""
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=mock_instance_response))
 
-        result = await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
 
         assert result["instance_id"] == "crn:v1:bluemix:public:lakehouse:us-south:a/test:inst123::"
         assert result["region"] == "us-south"
@@ -43,7 +43,7 @@ class TestGetInstanceDetails:
 
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
-        result = await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
 
         # All fields should have default values
         assert result["instance_id"] == "unknown"
@@ -68,7 +68,7 @@ class TestGetInstanceDetails:
 
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
-        result = await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
 
         assert result["instance_id"] == "crn:test"
         assert result["region"] == "us-east"
@@ -83,25 +83,27 @@ class TestGetInstanceDetails:
     async def test_get_instance_details_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test instance details when API returns error."""
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(
-            return_value=httpx.Response(500, json={"error": "Internal server error"})
+            return_value=httpx.Response(500, json={"message": "Internal server error"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Internal server error" in result["error_message"]
+        assert result["status_code"] == 500
 
     @pytest.mark.asyncio
     async def test_get_instance_details_not_found(self, mock_context, watsonx_client, respx_mock):
         """Test instance details when instance not found."""
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(
-            return_value=httpx.Response(404, json={"error": "Instance not found"})
+            return_value=httpx.Response(404, json={"message": "Instance not found"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Instance not found" in result["error_message"]
+        assert result["status_code"] == 404
 
     @pytest.mark.asyncio
     async def test_get_instance_details_timeout(self, mock_context, watsonx_client, respx_mock):
@@ -109,14 +111,14 @@ class TestGetInstanceDetails:
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(side_effect=httpx.TimeoutException("Request timed out"))
 
         with pytest.raises(httpx.TimeoutException):
-            await get_instance_details.fn(mock_context)
+            await get_instance_details(mock_context)
 
     @pytest.mark.asyncio
     async def test_get_instance_details_empty_response(self, mock_context, watsonx_client, respx_mock):
         """Test instance details with empty response."""
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json={}))
 
-        result = await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
 
         # All fields should have default values
         assert result["instance_id"] == "unknown"
@@ -141,7 +143,7 @@ class TestGetInstanceDetails:
 
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(return_value=httpx.Response(200, json=response))
 
-        result = await get_instance_details.fn(mock_context)
+        result = await get_instance_details(mock_context)
 
         assert result["public_endpoints_enabled"] is False
         assert result["private_endpoints_enabled"] is False

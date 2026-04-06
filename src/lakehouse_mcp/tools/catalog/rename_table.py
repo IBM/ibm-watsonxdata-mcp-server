@@ -37,7 +37,7 @@ async def rename_table(
     Returns:
         Dict with table details including the new name
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "renaming_table",
@@ -48,35 +48,39 @@ async def rename_table(
         engine_id=engine_id,
     )
 
-    try:
-        # Build request body
-        body = {
-            "name": new_table_name,
-        }
+    # Build request body
+    body = {
+        "name": new_table_name,
+    }
 
-        # Build API path
-        path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}?engine_id={engine_id}"
+    # Build API path
+    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}?engine_id={engine_id}"
 
-        # Make API call
-        response = await watsonx_client.patch(path, body)
-        
-        logger.info(
-            "table_renamed",
-            catalog_name=catalog_name,
-            schema_name=schema_name,
-            old_name=table_name,
-            new_name=new_table_name,
-        )
-
-        return response or {}
-
-    except Exception as e:
+    # Make API call
+    response = await watsonx_client.patch(path, body)
+    
+    # Check for API errors
+    if response.get("error"):
         logger.error(
             "table_rename_failed",
             catalog_name=catalog_name,
             schema_name=schema_name,
             table_name=table_name,
             new_table_name=new_table_name,
-            error=str(e),
+            error=response.get("error_message"),
         )
-        raise
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+    
+    logger.info(
+        "table_renamed",
+        catalog_name=catalog_name,
+        schema_name=schema_name,
+        old_name=table_name,
+        new_name=new_table_name,
+    )
+
+    return response or {}

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Upgraded to FastMCP v3.x (from v2.x)
+  - Updated dependency access pattern from `ctx.fastmcp.dependencies["watsonx_client"]` to `ctx.fastmcp.watsonx_client`
+  - Updated server initialization to use direct attribute assignment instead of dependencies dict
+  - All tools and tests updated for FastMCP v3 compatibility
+- Enhanced error handling across all tools
+  - HTTP client now returns error dicts instead of raising exceptions
+  - Added comprehensive error checking in all tool functions
+  - Improved error messages and status code reporting
+
+### Fixed
+- Improved error handling in watsonx.data API client
+- Enhanced error responses across catalog, engine, query, ingestion, and spark application tools
+
 ### Added
 - Spark engine management tools:
   - `create_spark_engine` - Create new Spark engines in watsonx.data

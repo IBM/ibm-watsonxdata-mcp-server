@@ -33,7 +33,7 @@ async def stop_spark_application(
     Returns:
         Dict with operation status
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "stopping_spark_application",
@@ -44,6 +44,15 @@ async def stop_spark_application(
     # Build path with application_id in the URL path
     path = f"/v3/spark_engines/{engine_id}/applications/{application_id}"
     response = await watsonx_client.delete(path)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("stop_spark_application_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     logger.info(
         "spark_application_stopped",

@@ -29,7 +29,7 @@ async def get_ingestion_job(
     Returns:
         Dict with detailed job status, configuration, and execution details
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "getting_ingestion_job",
@@ -38,6 +38,15 @@ async def get_ingestion_job(
 
     path = f"/v3/lhingestion/api/v1/ingestion/jobs/{job_id}"
     response = await watsonx_client.get(path)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("get_ingestion_job_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     logger.info(
         "ingestion_job_retrieved",

@@ -25,7 +25,7 @@ class TestListSchemas:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_schemas.fn(mock_context, catalog_name="iceberg_data", engine_id="presto-01")
+        result = await list_schemas(mock_context, catalog_name="iceberg_data", engine_id="presto-01")
 
         assert result["total_count"] == 3
         assert len(result["schemas"]) == 3
@@ -50,7 +50,7 @@ class TestListSchemas:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_schemas.fn(mock_context, catalog_name="tpch", engine_id="presto-01")
+        result = await list_schemas(mock_context, catalog_name="tpch", engine_id="presto-01")
 
         assert result["total_count"] == 3
         assert result["catalog_name"] == "tpch"
@@ -63,7 +63,7 @@ class TestListSchemas:
             return_value=httpx.Response(200, json={"schemas": []})
         )
 
-        result = await list_schemas.fn(mock_context, catalog_name="empty_catalog", engine_id="presto-01")
+        result = await list_schemas(mock_context, catalog_name="empty_catalog", engine_id="presto-01")
 
         assert result["total_count"] == 0
         assert result["schemas"] == []
@@ -79,7 +79,7 @@ class TestListTables:
             return_value=httpx.Response(200, json=mock_tables_response)
         )
 
-        result = await list_tables.fn(
+        result = await list_tables(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -107,7 +107,7 @@ class TestListTables:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_tables.fn(
+        result = await list_tables(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -123,7 +123,7 @@ class TestListTables:
             return_value=httpx.Response(200, json={"tables": []})
         )
 
-        result = await list_tables.fn(
+        result = await list_tables(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="empty_schema",
@@ -154,7 +154,7 @@ class TestListTables:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_tables.fn(
+        result = await list_tables(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -186,7 +186,7 @@ class TestListTables:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_tables.fn(
+        result = await list_tables(
             mock_context,
             catalog_name="test",
             schema_name="test",
@@ -203,18 +203,19 @@ class TestListTables:
     async def test_list_tables_api_error(self, mock_context, watsonx_client, respx_mock):
         """Test listing tables with API error."""
         respx_mock.get("https://test.watsonx.com/api/v3/catalogs/invalid/schemas/invalid/tables?engine_id=presto-01").mock(
-            return_value=httpx.Response(404, json={"error": "Schema not found"})
+            return_value=httpx.Response(404, json={"message": "Schema not found"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await list_tables.fn(
-                mock_context,
-                catalog_name="invalid",
-                schema_name="invalid",
-                engine_id="presto-01",
-            )
+        result = await list_tables(
+            mock_context,
+            catalog_name="invalid",
+            schema_name="invalid",
+            engine_id="presto-01",
+        )
         
-        assert "Schema not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Schema not found" in result["error_message"]
+        assert result["status_code"] == 404
 
 
 class TestDescribeTable:
@@ -227,7 +228,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_describe_table_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -251,7 +252,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_describe_table_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -289,7 +290,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -318,7 +319,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -357,7 +358,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="test",
             schema_name="test",
@@ -383,18 +384,19 @@ class TestDescribeTable:
         """Test describing non-existent table."""
         respx_mock.get(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+        ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await describe_table.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="nonexistent",
-                engine_id="presto-01",
-            )
+        result = await describe_table(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="nonexistent",
+            engine_id="presto-01",
+        )
         
-        assert "Table not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Table not found" in result["error_message"]
+        assert result["status_code"] == 404
 
     @pytest.mark.asyncio
     async def test_describe_table_no_partitions(self, mock_context, watsonx_client, respx_mock):
@@ -411,7 +413,7 @@ class TestDescribeTable:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await describe_table.fn(
+        result = await describe_table(
             mock_context,
             catalog_name="test",
             schema_name="test",
@@ -432,18 +434,19 @@ class TestCreateSchema:
         mock_response = {
             "name": "new_schema",
             "catalog_name": "iceberg_data",
-            "custom_path": "",
+            "custom_path": "new_schema",
         }
 
         respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_schema.fn(
+        result = await create_schema(
             mock_context,
             catalog_id="iceberg_data",
             schema_name="new_schema",
             engine_id="presto-01",
+            custom_path="new_schema",
         )
 
         assert result["name"] == "new_schema"
@@ -462,7 +465,7 @@ class TestCreateSchema:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_schema.fn(
+        result = await create_schema(
             mock_context,
             catalog_id="iceberg_data",
             schema_name="custom_schema",
@@ -479,7 +482,7 @@ class TestCreateSchema:
         mock_response = {
             "name": "storage_schema",
             "catalog_name": "iceberg_data",
-            "custom_path": "",
+            "custom_path": "storage_schema",
             "storage_name": "my-bucket",
         }
 
@@ -487,11 +490,12 @@ class TestCreateSchema:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_schema.fn(
+        result = await create_schema(
             mock_context,
             catalog_id="iceberg_data",
             schema_name="storage_schema",
             engine_id="presto-01",
+            custom_path="storage_schema",
             storage_name="my-bucket",
         )
 
@@ -502,36 +506,40 @@ class TestCreateSchema:
     async def test_create_schema_already_exists(self, mock_context, watsonx_client, respx_mock):
         """Test creating a schema that already exists."""
         respx_mock.post("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas?engine_id=presto-01").mock(
-            return_value=httpx.Response(409, json={"error": "Schema already exists"})
+            return_value=httpx.Response(409, json={"message": "Schema already exists"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await create_schema.fn(
-                mock_context,
-                catalog_id="iceberg_data",
-                schema_name="existing_schema",
-                engine_id="presto-01",
-            )
+        result = await create_schema(
+            mock_context,
+            catalog_id="iceberg_data",
+            schema_name="existing_schema",
+            engine_id="presto-01",
+            custom_path="existing_schema",
+        )
         
-        assert "Schema already exists" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Schema already exists" in result["error_message"]
+        assert result["status_code"] == 409
 
     @pytest.mark.asyncio
     async def test_create_schema_invalid_catalog(self, mock_context, watsonx_client, respx_mock):
         """Test creating a schema in non-existent catalog."""
         respx_mock.post("https://test.watsonx.com/api/v3/catalogs/invalid_catalog/schemas?engine_id=presto-01").mock(
-            return_value=httpx.Response(404, json={"error": "Catalog not found"})
+            return_value=httpx.Response(404, json={"message": "Catalog not found"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await create_schema.fn(
-                mock_context,
-                catalog_id="invalid_catalog",
-                schema_name="new_schema",
-                engine_id="presto-01",
-            )
+        result = await create_schema(
+            mock_context,
+            catalog_id="invalid_catalog",
+            schema_name="new_schema",
+            engine_id="presto-01",
+            custom_path="new_schema",
+        )
         
-        assert "Catalog not found" in str(exc_info.value)
-
+        assert result["error"] is True
+        assert "Catalog not found" in result["error_message"]
+        assert result["status_code"] == 404
+        
 
 
 class TestRenameTable:
@@ -552,7 +560,7 @@ class TestRenameTable:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01"
         ).mock(return_value=httpx.Response(200, json=mock_response))
 
-        result = await rename_table.fn(
+        result = await rename_table(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -572,19 +580,20 @@ class TestRenameTable:
         
         respx_mock.patch(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+        ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await rename_table.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="nonexistent",
-                new_table_name="new_name",
-                engine_id="presto-01",
-            )
+        result = await rename_table(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="nonexistent",
+            new_table_name="new_name",
+            engine_id="presto-01",
+        )
         
-        assert "Table not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Table not found" in result["error_message"]
+        assert result["status_code"] == 404
 
     @pytest.mark.asyncio
     async def test_rename_table_name_conflict(self, mock_context, watsonx_client, respx_mock):
@@ -593,19 +602,20 @@ class TestRenameTable:
         
         respx_mock.patch(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(409, json={"error": "Table name already exists"}))
+        ).mock(return_value=httpx.Response(409, json={"message": "Table name already exists"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await rename_table.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="customers",
-                new_table_name="orders",
-                engine_id="presto-01",
-            )
+        result = await rename_table(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            new_table_name="orders",
+            engine_id="presto-01",
+        )
         
-        assert "Table name already exists" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Table name already exists" in result["error_message"]
+        assert result["status_code"] == 409
 
 
 class TestAddColumns:
@@ -639,7 +649,7 @@ class TestAddColumns:
             }
         ]
 
-        result = await add_columns.fn(
+        result = await add_columns(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -676,7 +686,7 @@ class TestAddColumns:
             {"name": "col3", "type": "boolean"},
         ]
 
-        result = await add_columns.fn(
+        result = await add_columns(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -718,7 +728,7 @@ class TestAddColumns:
             }
         ]
 
-        result = await add_columns.fn(
+        result = await add_columns(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -737,21 +747,22 @@ class TestAddColumns:
         
         respx_mock.post(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent/columns?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+        ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
         columns = [{"name": "new_col", "type": "string"}]
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await add_columns.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="nonexistent",
-                columns=columns,
-                engine_id="presto-01",
-            )
+        result = await add_columns(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="nonexistent",
+            columns=columns,
+            engine_id="presto-01",
+        )
         
-        assert "Table not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Table not found" in result["error_message"]
+        assert result["status_code"] == 404
 
 
 class TestRenameColumn:
@@ -772,7 +783,7 @@ class TestRenameColumn:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/email?engine_id=presto-01"
         ).mock(return_value=httpx.Response(200, json=mock_response))
 
-        result = await rename_column.fn(
+        result = await rename_column(
             mock_context,
             catalog_name="iceberg_data",
             schema_name="sales_db",
@@ -791,20 +802,21 @@ class TestRenameColumn:
         
         respx_mock.patch(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/nonexistent?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(404, json={"error": "Column not found"}))
+        ).mock(return_value=httpx.Response(404, json={"message": "Column not found"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await rename_column.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="customers",
-                column_name="nonexistent",
-                new_column_name="new_name",
-                engine_id="presto-01",
-            )
+        result = await rename_column(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            column_name="nonexistent",
+            new_column_name="new_name",
+            engine_id="presto-01",
+        )
         
-        assert "Column not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Column not found" in result["error_message"]
+        assert result["status_code"] == 404
 
     @pytest.mark.asyncio
     async def test_rename_column_name_conflict(self, mock_context, watsonx_client, respx_mock):
@@ -813,20 +825,21 @@ class TestRenameColumn:
         
         respx_mock.patch(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/email?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(409, json={"error": "Column name already exists"}))
+        ).mock(return_value=httpx.Response(409, json={"message": "Column name already exists"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await rename_column.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="customers",
-                column_name="email",
-                new_column_name="id",
-                engine_id="presto-01",
-            )
+        result = await rename_column(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="customers",
+            column_name="email",
+            new_column_name="id",
+            engine_id="presto-01",
+        )
         
-        assert "Column name already exists" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Column name already exists" in result["error_message"]
+        assert result["status_code"] == 409
 
     @pytest.mark.asyncio
     async def test_rename_column_table_not_found(self, mock_context, watsonx_client, respx_mock):
@@ -835,17 +848,18 @@ class TestRenameColumn:
         
         respx_mock.patch(
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent/columns/email?engine_id=presto-01"
-        ).mock(return_value=httpx.Response(404, json={"error": "Table not found"}))
+        ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await rename_column.fn(
-                mock_context,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                table_name="nonexistent",
-                column_name="email",
-                new_column_name="new_email",
-                engine_id="presto-01",
-            )
+        result = await rename_column(
+            mock_context,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            table_name="nonexistent",
+            column_name="email",
+            new_column_name="new_email",
+            engine_id="presto-01",
+        )
         
-        assert "Table not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Table not found" in result["error_message"]
+        assert result["status_code"] == 404

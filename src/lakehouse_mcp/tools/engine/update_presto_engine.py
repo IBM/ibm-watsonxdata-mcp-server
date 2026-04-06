@@ -41,7 +41,7 @@ async def update_presto_engine(
     Returns:
         Dict with updated engine configuration
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Build request body with only provided parameters
     body: dict[str, Any] = {}
@@ -66,6 +66,15 @@ async def update_presto_engine(
 
     path = f"/v3/presto_engines/{engine_id}"
     response = await watsonx_client.patch(path, body)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("update_presto_engine_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     logger.info(
         "presto_engine_updated",

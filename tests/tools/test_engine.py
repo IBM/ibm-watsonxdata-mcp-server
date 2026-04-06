@@ -30,7 +30,7 @@ class TestListEngines:
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        result = await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
 
         # Check summary statistics
         assert result["summary"]["total_count"] == 3
@@ -76,7 +76,7 @@ class TestListEngines:
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
 
-        result = await list_engines.fn(mock_context, engine_type="presto")
+        result = await list_engines(mock_context, engine_type="presto")
 
         # Check summary statistics
         assert result["summary"]["total_count"] == 2
@@ -100,7 +100,7 @@ class TestListEngines:
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        result = await list_engines.fn(mock_context, engine_type="spark")
+        result = await list_engines(mock_context, engine_type="spark")
 
         # Check summary statistics
         assert result["summary"]["total_count"] == 1
@@ -115,7 +115,7 @@ class TestListEngines:
     async def test_list_engines_invalid_type(self, mock_context):
         """Test listing engines with invalid engine type."""
         with pytest.raises(ValueError) as exc_info:
-            await list_engines.fn(mock_context, engine_type="flink")
+            await list_engines(mock_context, engine_type="flink")
 
         assert "Invalid engine_type: flink" in str(exc_info.value)
         assert "Must be 'presto', 'spark', or None" in str(exc_info.value)
@@ -126,7 +126,7 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
-        result = await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
 
         assert result["summary"]["total_count"] == 0
         assert result["summary"]["presto_count"] == 0
@@ -137,16 +137,17 @@ class TestListEngines:
     async def test_list_engines_presto_api_error(self, mock_context, watsonx_client, respx_mock, mock_spark_engines_response):
         """Test listing engines when Presto API fails."""
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
-            return_value=httpx.Response(500, json={"error": "Internal error"})
+            return_value=httpx.Response(500, json={"message": "Internal error"})
         )
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Internal error" in result["error_message"]
+        assert result["status_code"] == 500
 
     @pytest.mark.asyncio
     async def test_list_engines_spark_api_error(self, mock_context, watsonx_client, respx_mock, mock_presto_engines_response):
@@ -155,13 +156,14 @@ class TestListEngines:
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
-            return_value=httpx.Response(500, json={"error": "Internal error"})
+            return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
         
-        assert "API Error" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Internal error" in result["error_message"]
+        assert result["status_code"] == 500
 
     @pytest.mark.asyncio
     async def test_list_engines_timeout(self, mock_context, watsonx_client, respx_mock):
@@ -169,7 +171,7 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(side_effect=httpx.TimeoutException("Request timed out"))
 
         with pytest.raises(httpx.TimeoutException):
-            await list_engines.fn(mock_context)
+            await list_engines(mock_context)
 
     @pytest.mark.asyncio
     async def test_list_engines_handles_alternative_id_field(self, mock_context, watsonx_client, respx_mock):
@@ -188,7 +190,7 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
-        result = await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
 
         assert len(result["engines"]) == 1
         assert result["engines"][0]["engine_id"] == "presto-alt"
@@ -201,7 +203,7 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json=response))
 
-        result = await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
 
         assert len(result["engines"]) == 1
         assert result["engines"][0]["display_name"] == "Alternative Spark"
@@ -222,7 +224,7 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
-        result = await list_engines.fn(mock_context)
+        result = await list_engines(mock_context)
 
         assert len(result["engines"]) == 1
         assert result["engines"][0]["status"] == "unknown"
@@ -240,15 +242,16 @@ class TestListEngines:
         presto_route = respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
-
         spark_route = respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        await list_engines.fn(mock_context)
+        await list_engines(mock_context)
 
-        # Both routes should be called
+        # All routes should be called
         assert presto_route.called
+        assert spark_route.called
+
 
 
 class TestRestartPrestoEngine:
@@ -263,7 +266,7 @@ class TestRestartPrestoEngine:
             return_value=httpx.Response(200, json={"status": "restarting"})
         )
 
-        result = await restart_presto_engine.fn(mock_context, engine_id="presto-01")
+        result = await restart_presto_engine(mock_context, engine_id="presto-01")
 
         assert result["engine_id"] == "presto-01"
         assert result["engine_type"] == "presto"
@@ -276,13 +279,14 @@ class TestRestartPrestoEngine:
         from lakehouse_mcp.tools.engine.restart_presto_engine import restart_presto_engine
 
         respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/invalid/restart").mock(
-            return_value=httpx.Response(404, json={"error": "Engine not found"})
+            return_value=httpx.Response(404, json={"message": "Engine not found"})
         )
 
-        with pytest.raises(RuntimeError) as exc_info:
-            await restart_presto_engine.fn(mock_context, engine_id="invalid")
+        result = await restart_presto_engine(mock_context, engine_id="invalid")
         
-        assert "Engine not found" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Engine not found" in result["error_message"]
+        assert result["status_code"] == 404
 
 
 class TestPausePrestoEngine:
@@ -305,7 +309,7 @@ class TestPausePrestoEngine:
             )
         )
 
-        result = await pause_presto_engine.fn(mock_context, engine_id="presto-01")
+        result = await pause_presto_engine(mock_context, engine_id="presto-01")
 
         assert result["engine_id"] == "presto-01"
         assert result["message"] == "Pause Engine"
@@ -316,11 +320,14 @@ class TestPausePrestoEngine:
         from lakehouse_mcp.tools.engine.pause_presto_engine import pause_presto_engine
 
         respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/pause").mock(
-            return_value=httpx.Response(500, json={"error": "Internal error"})
+            return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        with pytest.raises(RuntimeError):
-            await pause_presto_engine.fn(mock_context, engine_id="presto-01")
+        result = await pause_presto_engine(mock_context, engine_id="presto-01")
+        
+        assert result["error"] is True
+        assert "Internal error" in result["error_message"]
+        assert result["status_code"] == 500
 
 
 class TestResumePrestoEngine:
@@ -341,7 +348,7 @@ class TestResumePrestoEngine:
             )
         )
 
-        result = await resume_presto_engine.fn(mock_context, engine_id="presto-01")
+        result = await resume_presto_engine(mock_context, engine_id="presto-01")
 
         assert result["engine_id"] == "presto-01"
         assert result["message"] == "Success"
@@ -352,11 +359,14 @@ class TestResumePrestoEngine:
         from lakehouse_mcp.tools.engine.resume_presto_engine import resume_presto_engine
 
         respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/resume").mock(
-            return_value=httpx.Response(500, json={"error": "Internal error"})
+            return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        with pytest.raises(RuntimeError):
-            await resume_presto_engine.fn(mock_context, engine_id="presto-01")
+        result = await resume_presto_engine(mock_context, engine_id="presto-01")
+        
+        assert result["error"] is True
+        assert "Internal error" in result["error_message"]
+        assert result["status_code"] == 500
 
 
 class TestUpdatePrestoEngine:
@@ -371,7 +381,7 @@ class TestUpdatePrestoEngine:
             return_value=httpx.Response(200, json={"engine_id": "presto-01", "description": "Updated description"})
         )
 
-        result = await update_presto_engine.fn(mock_context, engine_id="presto-01", description="Updated description")
+        result = await update_presto_engine(mock_context, engine_id="presto-01", description="Updated description")
 
         assert result["engine_id"] == "presto-01"
         assert result["description"] == "Updated description"
@@ -385,12 +395,11 @@ class TestUpdatePrestoEngine:
             return_value=httpx.Response(200, json={"engine_id": "presto-01", "status": "restarting"})
         )
 
-        result = await update_presto_engine.fn(
+        result = await update_presto_engine(
             mock_context, engine_id="presto-01", display_name="New Name", engine_restart="force"
         )
 
         assert result["engine_id"] == "presto-01"
-
 
 class TestCreateSparkEngine:
     """Tests for create_spark_engine tool."""
@@ -411,7 +420,7 @@ class TestCreateSparkEngine:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_spark_engine.fn(
+        result = await create_spark_engine(
             mock_context,
             origin="native",
             display_name="New Spark Engine",
@@ -439,7 +448,7 @@ class TestCreateSparkEngine:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_spark_engine.fn(
+        result = await create_spark_engine(
             mock_context,
             origin="native",
             display_name="Full Spark Engine",
@@ -470,7 +479,7 @@ class TestPauseSparkEngine:
             )
         )
 
-        result = await pause_spark_engine.fn(mock_context, engine_id="spark-01", force=False)
+        result = await pause_spark_engine(mock_context, engine_id="spark-01", force=False)
 
         assert result["engine_id"] == "spark-01"
         assert result["forced"] is False
@@ -485,10 +494,11 @@ class TestPauseSparkEngine:
             return_value=httpx.Response(200, json={"message": "pause spark engine"})
         )
 
-        result = await pause_spark_engine.fn(mock_context, engine_id="spark-01", force=True)
+        result = await pause_spark_engine(mock_context, engine_id="spark-01", force=True)
 
         assert result["engine_id"] == "spark-01"
         assert result["forced"] is True
+
 
 class TestResumeSparkEngine:
     """Tests for resume_spark_engine tool (SAAS only)."""
@@ -502,10 +512,11 @@ class TestResumeSparkEngine:
             return_value=httpx.Response(200, json={"message": "resume spark engine", "message_code": "success"})
         )
 
-        result = await resume_spark_engine.fn(mock_context, engine_id="spark-01")
+        result = await resume_spark_engine(mock_context, engine_id="spark-01")
 
         assert result["engine_id"] == "spark-01"
         assert result["message"] == "resume spark engine"
+
 
 class TestUpdateSparkEngine:
     """Tests for update_spark_engine tool (SAAS only)."""
@@ -525,7 +536,7 @@ class TestUpdateSparkEngine:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await update_spark_engine.fn(
+        result = await update_spark_engine(
             mock_context,
             engine_id="spark-01",
             description="Updated description",
@@ -550,7 +561,7 @@ class TestUpdateSparkEngine:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await update_spark_engine.fn(
+        result = await update_spark_engine(
             mock_context,
             engine_id="spark-01",
             display_name="Updated Spark Engine",
@@ -560,4 +571,3 @@ class TestUpdateSparkEngine:
 
         assert result["display_name"] == "Updated Spark Engine"
         assert result["description"] == "Updated description"
-

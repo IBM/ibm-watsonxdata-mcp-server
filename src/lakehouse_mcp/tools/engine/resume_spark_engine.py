@@ -26,31 +26,30 @@ async def resume_spark_engine(ctx: Context, engine_id: str) -> dict[str, Any]:
     Returns:
         Dict with resume operation status
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info("resuming_spark_engine", engine_id=engine_id)
 
-    try:
-        # Resume the engine (empty POST request)
-        path = f"/v3/spark_engines/{engine_id}/resume"
-        response = await watsonx_client.post(path, {})
+    # Resume the engine (empty POST request)
+    path = f"/v3/spark_engines/{engine_id}/resume"
+    response = await watsonx_client.post(path, {})
 
-        # Build result from API response
-        result = {
-            "message": response.get("message", "resume spark engine"),
-            "message_code": response.get("message_code", "success"),
-            "engine_id": engine_id,
+    # Check for API errors
+    if response.get("error"):
+        logger.error("resume_spark_engine_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
         }
 
-        logger.info("spark_engine_resumed", engine_id=engine_id)
+    # Build result from API response
+    result = {
+        "message": response.get("message", "resume spark engine"),
+        "message_code": response.get("message_code", "success"),
+        "engine_id": engine_id,
+    }
 
-        return result
+    logger.info("spark_engine_resumed", engine_id=engine_id)
 
-    except ValueError as e:
-        logger.error("resume_spark_engine_validation_error", engine_id=engine_id, error=str(e))
-        raise
-
-    except Exception as e:
-        logger.error("resume_spark_engine_error", engine_id=engine_id, error=str(e))
-        raise
-
+    return result

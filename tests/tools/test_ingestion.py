@@ -34,7 +34,7 @@ class TestCreateIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_ingestion_job.fn(
+        result = await create_ingestion_job(
             mock_context,
             job_id="job-123",
             catalog="iceberg_data",
@@ -66,7 +66,7 @@ class TestCreateIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_ingestion_job.fn(
+        result = await create_ingestion_job(
             mock_context,
             job_id="job-456",
             catalog="iceberg_data",
@@ -99,7 +99,7 @@ class TestCreateIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_ingestion_job.fn(
+        result = await create_ingestion_job(
             mock_context,
             job_id="job-789",
             catalog="iceberg_data",
@@ -130,7 +130,7 @@ class TestCreateIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_ingestion_job.fn(
+        result = await create_ingestion_job(
             mock_context,
             job_id="job-abc",
             catalog="iceberg_data",
@@ -164,7 +164,7 @@ class TestCreateIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await create_ingestion_job.fn(
+        result = await create_ingestion_job(
             mock_context,
             job_id="job-def",
             catalog="iceberg_data",
@@ -215,7 +215,7 @@ class TestListIngestionJobs:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_ingestion_jobs.fn(
+        result = await list_ingestion_jobs(
             mock_context,
         )
 
@@ -251,7 +251,7 @@ class TestListIngestionJobs:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_ingestion_jobs.fn(
+        result = await list_ingestion_jobs(
             mock_context,
             start=10,
             limit=10,
@@ -278,7 +278,7 @@ class TestListIngestionJobs:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await list_ingestion_jobs.fn(
+        result = await list_ingestion_jobs(
             mock_context,
         )
 
@@ -313,7 +313,7 @@ class TestGetIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_ingestion_job.fn(
+        result = await get_ingestion_job(
             mock_context,
             job_id="job-123",
         )
@@ -348,7 +348,7 @@ class TestGetIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_ingestion_job.fn(
+        result = await get_ingestion_job(
             mock_context,
             job_id="job-456",
         )
@@ -382,7 +382,7 @@ class TestGetIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_ingestion_job.fn(
+        result = await get_ingestion_job(
             mock_context,
             job_id="job-789",
         )
@@ -413,7 +413,7 @@ class TestGetIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await get_ingestion_job.fn(
+        result = await get_ingestion_job(
             mock_context,
             job_id="job-abc",
         )
@@ -442,7 +442,7 @@ class TestDeleteIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job.fn(
+        result = await delete_ingestion_job(
             mock_context,
             job_id="job-123",
         )
@@ -465,7 +465,7 @@ class TestDeleteIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job.fn(
+        result = await delete_ingestion_job(
             mock_context,
             job_id="job-running",
         )
@@ -481,14 +481,17 @@ class TestDeleteIngestionJob:
     ):
         """Test deleting a non-existent ingestion job."""
         respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-nonexistent").mock(
-            return_value=httpx.Response(404, json={"error": "Ingestion job not found"})
+            return_value=httpx.Response(404, json={"message": "Ingestion job not found"})
         )
 
-        with pytest.raises(Exception):
-            await delete_ingestion_job.fn(
-                mock_context,
-                job_id="job-nonexistent",
-            )
+        result = await delete_ingestion_job(
+            mock_context,
+            job_id="job-nonexistent",
+        )
+        
+        assert result["error"] is True
+        assert "Ingestion job not found" in result["error_message"]
+        assert result["status_code"] == 404
 
     @pytest.mark.asyncio
     async def test_delete_completed_job(
@@ -506,7 +509,7 @@ class TestDeleteIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job.fn(
+        result = await delete_ingestion_job(
             mock_context,
             job_id="job-completed",
         )

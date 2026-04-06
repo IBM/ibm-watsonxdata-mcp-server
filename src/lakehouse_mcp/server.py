@@ -46,12 +46,10 @@ def create_server(config: Config) -> fastmcp.FastMCP:
     meter = get_meter(__name__)
 
     # Store dependencies for tool access
-    # Tools can access these via Context
-    mcp.dependencies = {
-        "config": config,
-        "watsonx_client": watsonx_client,
-        "meter": meter,
-    }
+    # Tools can access these via ctx.fastmcp in FastMCP v3
+    mcp.config = config
+    mcp.watsonx_client = watsonx_client
+    mcp.meter = meter
 
     logger.debug("mcp_server_created", server_name="IBMWatsonxDataMCPServer")
 

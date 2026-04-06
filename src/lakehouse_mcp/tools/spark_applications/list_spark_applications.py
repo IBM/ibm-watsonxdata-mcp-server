@@ -31,7 +31,7 @@ async def list_spark_applications(
     Returns:
         Dict with applications list containing application details
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Build query parameters into path
     path = f"/v3/spark_engines/{engine_id}/applications"
@@ -47,6 +47,15 @@ async def list_spark_applications(
     )
 
     response = await watsonx_client.get(path)
+
+    # Check for API errors
+    if response.get("error"):
+        logger.error("list_spark_applications_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
     application_count = len(response.get("applications", []))
     logger.info(

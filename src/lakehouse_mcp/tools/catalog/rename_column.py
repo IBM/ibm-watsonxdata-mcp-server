@@ -39,7 +39,7 @@ async def rename_column(
     Returns:
         Dict with column details including the new name
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "renaming_column",
@@ -51,30 +51,19 @@ async def rename_column(
         engine_id=engine_id,
     )
 
-    try:
-        # Build request body
-        body = {
-            "name": new_column_name,
-        }
+    # Build request body
+    body = {
+        "name": new_column_name,
+    }
 
-        # Build API path
-        path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}/columns/{column_name}?engine_id={engine_id}"
+    # Build API path
+    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}/columns/{column_name}?engine_id={engine_id}"
 
-        # Make API call
-        response = await watsonx_client.patch(path, body)
-        
-        logger.info(
-            "column_renamed",
-            catalog_name=catalog_name,
-            schema_name=schema_name,
-            table_name=table_name,
-            old_name=column_name,
-            new_name=new_column_name,
-        )
-
-        return response or {}
-
-    except Exception as e:
+    # Make API call
+    response = await watsonx_client.patch(path, body)
+    
+    # Check for API errors
+    if response.get("error"):
         logger.error(
             "column_rename_failed",
             catalog_name=catalog_name,
@@ -82,6 +71,21 @@ async def rename_column(
             table_name=table_name,
             column_name=column_name,
             new_column_name=new_column_name,
-            error=str(e),
+            error=response.get("error_message"),
         )
-        raise
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+    
+    logger.info(
+        "column_renamed",
+        catalog_name=catalog_name,
+        schema_name=schema_name,
+        table_name=table_name,
+        old_name=column_name,
+        new_name=new_column_name,
+    )
+
+    return response or {}

@@ -36,7 +36,7 @@ async def explain_analyze_query(
     Returns:
         Dict with engine_id, engine_type, statement, analysis, and full response
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Validate engine type
     if engine_type not in ["presto", "prestissimo"]:
@@ -66,6 +66,15 @@ async def explain_analyze_query(
     # Handle None response
     response = response or {}
 
+    # Check for API errors
+    if response.get("error"):
+        logger.error("explain_analyze_query_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+
     logger.info(
         "query_explained_analyzed",
         engine_id=engine_id,
@@ -82,5 +91,3 @@ async def explain_analyze_query(
     }
 
     return result
-
-# Made with Bob

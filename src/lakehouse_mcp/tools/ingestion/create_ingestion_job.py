@@ -68,7 +68,7 @@ async def create_ingestion_job(
     Returns:
         Dict with job_id, status, and creation details
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     # Extract bucket_name from file_paths if not provided
     if bucket_name is None and file_paths.startswith("s3://"):
@@ -124,25 +124,22 @@ async def create_ingestion_job(
         table=table,
     )
 
-    try:
-        path = "/v3/lhingestion/api/v1/ingestion/jobs"
-        response = await watsonx_client.post(path, body)
+    path = "/v3/lhingestion/api/v1/ingestion/jobs"
+    response = await watsonx_client.post(path, body)
 
-        logger.info(
-            "ingestion_job_created",
-            job_id=response.get("job_id"),
-            status=response.get("status"),
-        )
+    # Check for API errors
+    if response.get("error"):
+        logger.error("create_ingestion_job_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
-        return response
+    logger.info(
+        "ingestion_job_created",
+        job_id=response.get("job_id"),
+        status=response.get("status"),
+    )
 
-    except Exception as e:
-        logger.error(
-            "ingestion_job_creation_failed",
-            job_id=job_id,
-            catalog=catalog,
-            schema=schema,
-            table=table,
-            error=str(e),
-        )
-        raise
+    return response

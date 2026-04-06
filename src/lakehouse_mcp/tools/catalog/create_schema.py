@@ -23,7 +23,7 @@ async def create_schema(
     catalog_id: str,
     schema_name: str,
     engine_id: str,
-    custom_path: str = "",
+    custom_path: str,
     storage_name: str = "",
 ) -> dict[str, Any]:
     """Create a new schema in a watsonx.data catalog.
@@ -32,7 +32,8 @@ async def create_schema(
         catalog_id: Catalog identifier (e.g., "iceberg_data")
         schema_name: Name for the new schema
         engine_id: Engine ID to use for the operation (from list_engines)
-        custom_path: Path within bucket where schema will be created (default: "")
+        custom_path: Path within bucket where schema will be created (REQUIRED, must be at least 1 character).
+                     If unsure, use the schema_name as the custom_path.
         storage_name: Storage/bucket name for the schema (REQUIRED for object storage catalogs)
 
     Returns:
@@ -42,7 +43,11 @@ async def create_schema(
         - custom_path: Custom path if specified
         - storage_name: Storage name if specified
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
+
+    # Validate custom_path
+    if not custom_path or len(custom_path) < 1:
+        raise ValueError("custom_path must be at least 1 character long")
 
     logger.info(
         "creating_schema",
@@ -51,36 +56,40 @@ async def create_schema(
         engine_id=engine_id,
     )
 
-    try:
-        # Build request body
-        # Note: API requires 'name' (not 'schema_name') and 'custom_path' is required
-        body = {
-            "name": schema_name,
-            "custom_path": custom_path if custom_path else "",
-        }
-        
-        if storage_name:
-            body["storage_name"] = storage_name
+    # Build request body
+    # Note: API requires 'name' (not 'schema_name') and 'custom_path' is required
+    body = {
+        "name": schema_name,
+        "custom_path": custom_path,
+    }
+    
+    if storage_name:
+        body["storage_name"] = storage_name
 
-        # Build API path
-        path = f"/v3/catalogs/{catalog_id}/schemas?engine_id={engine_id}"
+    # Build API path
+    path = f"/v3/catalogs/{catalog_id}/schemas?engine_id={engine_id}"
 
-        # Make API call
-        response = await watsonx_client.post(path, body)
-        
-        logger.info(
-            "schema_created",
-            catalog_id=catalog_id,
-            schema_name=schema_name,
-        )
-
-        return response or {}
-
-    except Exception as e:
+    # Make API call
+    response = await watsonx_client.post(path, body)
+    
+    # Check for API errors
+    if response.get("error"):
         logger.error(
             "schema_creation_failed",
             catalog_id=catalog_id,
             schema_name=schema_name,
-            error=str(e),
+            error=response.get("error_message"),
         )
-        raise
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
+    
+    logger.info(
+        "schema_created",
+        catalog_id=catalog_id,
+        schema_name=schema_name,
+    )
+
+    return response or {}

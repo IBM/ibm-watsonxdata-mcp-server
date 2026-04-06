@@ -33,28 +33,28 @@ async def delete_ingestion_job(
     Returns:
         Dict with deletion status
     """
-    watsonx_client = ctx.fastmcp.dependencies["watsonx_client"]
+    watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
         "deleting_ingestion_job",
         job_id=job_id,
     )
 
-    try:
-        path = f"/v3/ingestion_jobs/{job_id}"
-        response = await watsonx_client.delete(path)
+    path = f"/v3/ingestion_jobs/{job_id}"
+    response = await watsonx_client.delete(path)
 
-        logger.info(
-            "ingestion_job_deleted",
-            job_id=job_id,
-        )
+    # Check for API errors
+    if response.get("error"):
+        logger.error("delete_ingestion_job_failed", error=response.get("error_message"))
+        return {
+            "error": True,
+            "error_message": response.get("error_message", "Unknown error"),
+            "status_code": response.get("status_code", 0),
+        }
 
-        return response
+    logger.info(
+        "ingestion_job_deleted",
+        job_id=job_id,
+    )
 
-    except Exception as e:
-        logger.error(
-            "ingestion_job_deletion_failed",
-            job_id=job_id,
-            error=str(e),
-        )
-        raise
+    return response
