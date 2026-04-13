@@ -1,6 +1,6 @@
 [project]
 name = "ibm-watsonxdata-mcp-server"
-version = "0.1.2"
+version = "0.1.3"
 description = "Model Context Protocol (MCP) server for IBM watsonx.data - enables AI assistants to query and explore lakehouse data"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -54,7 +54,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.48b0",
     "structlog>=24.0.0",
     "authlib>=1.6.9",
-    "cryptography>=46.0.6",
+    "cryptography>=46.0.7",
 ]
 
 [project.optional-dependencies]

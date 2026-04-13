@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-04-13
+
 ### Changed
 - Upgraded to FastMCP v3.x (from v2.x)
   - Updated dependency access pattern from `ctx.fastmcp.dependencies["watsonx_client"]` to `ctx.fastmcp.watsonx_client`

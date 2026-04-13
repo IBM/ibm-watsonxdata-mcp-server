@@ -38,7 +38,7 @@ charset-normalizer==3.4.7
     # via requests
 click==8.3.2
     # via uvicorn
-cryptography==46.0.6
+cryptography==46.0.7
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   authlib
