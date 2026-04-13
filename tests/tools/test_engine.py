@@ -401,6 +401,188 @@ class TestUpdatePrestoEngine:
 
         assert result["engine_id"] == "presto-01"
 
+
+class TestCreatePrestoEngine:
+    """Tests for create_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_minimal(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a Presto engine with minimal parameters."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        create_response = {"engine_id": "presto-new", "origin": "native", "display_name": "New Presto Engine"}
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines").mock(
+            return_value=httpx.Response(201, json=create_response)
+        )
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "small", "quantity": 1},
+            "worker": {"node_type": "small", "quantity": 2}
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="New Presto Engine",
+            configuration=configuration
+        )
+
+        assert result["engine_id"] == "presto-new"
+        assert result["origin"] == "native"
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_full(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a Presto engine with all parameters."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        create_response = {
+            "engine_id": "presto-full",
+            "origin": "native",
+            "display_name": "Full Presto Engine",
+            "description": "Test engine",
+        }
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines").mock(
+            return_value=httpx.Response(201, json=create_response)
+        )
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "medium", "quantity": 1},
+            "worker": {"node_type": "medium", "quantity": 3}
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="Full Presto Engine",
+            configuration=configuration,
+            description="Test engine",
+            tags=["test", "dev"],
+        )
+
+        assert result["engine_id"] == "presto-full"
+        assert result["description"] == "Test engine"
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_validation_mismatched_node_types(self, mock_context, watsonx_client):
+        """Test that creating engine with mismatched coordinator/worker node types fails validation."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "small", "quantity": 2}
+        }
+
+        with pytest.raises(ValueError) as exc_info:
+            await create_presto_engine(
+                mock_context,
+                origin="native",
+                display_name="Invalid Engine",
+                configuration=configuration
+            )
+
+        assert "must use the same node_type" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_validation_invalid_node_type(self, mock_context, watsonx_client):
+        """Test that creating engine with invalid node type fails validation."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "custom", "quantity": 1},
+            "worker": {"node_type": "custom", "quantity": 2}
+        }
+
+        with pytest.raises(ValueError) as exc_info:
+            await create_presto_engine(
+                mock_context,
+                origin="native",
+                display_name="Invalid Engine",
+                configuration=configuration
+            )
+
+        assert "must be one of" in str(exc_info.value)
+
+
+class TestScalePrestoEngine:
+    """Tests for scale_presto_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_scale_presto_engine_success(
+        self,
+        mock_context,
+        respx_mock,
+    ):
+        """Test scaling Presto engine with matching node types."""
+        from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/scale").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "message": "Success",
+                    "coordinator": {"node_type": "small", "quantity": 1},
+                    "worker": {"node_type": "small", "quantity": 5},
+                },
+            )
+        )
+
+        result = await scale_presto_engine(
+            mock_context,
+            engine_id="presto-01",
+            coordinator_node_type="small",
+            coordinator_quantity=1,
+            worker_node_type="small",
+            worker_quantity=5,
+        )
+
+        assert result["coordinator"]["quantity"] == 1
+        assert result["worker"]["quantity"] == 5
+
+    @pytest.mark.asyncio
+    async def test_scale_presto_engine_validation_mismatched_node_types(
+        self,
+        mock_context,
+    ):
+        """Test that scaling with mismatched node types fails validation."""
+        from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+
+        with pytest.raises(ValueError) as exc_info:
+            await scale_presto_engine(
+                mock_context,
+                engine_id="presto-01",
+                coordinator_node_type="starter",
+                coordinator_quantity=1,
+                worker_node_type="small",
+                worker_quantity=3,
+            )
+
+        assert "must match" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_scale_presto_engine_validation_invalid_node_type(
+        self,
+        mock_context,
+    ):
+        """Test that scaling with invalid node type fails validation."""
+        from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+
+        with pytest.raises(ValueError) as exc_info:
+            await scale_presto_engine(
+                mock_context,
+                engine_id="presto-01",
+                coordinator_node_type="custom",
+                coordinator_quantity=1,
+                worker_node_type="custom",
+                worker_quantity=3,
+            )
+
+        assert "must be one of" in str(exc_info.value)
+
+
 class TestCreateSparkEngine:
     """Tests for create_spark_engine tool."""
 
