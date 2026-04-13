@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced error responses across catalog, engine, query, ingestion, and spark application tools
 
 ### Added
+- Presto engine management tools:
+  - `create_presto_engine` - Create new Presto engines in watsonx.data
+  - `scale_presto_engine` - Scale Presto engines by adjusting worker node counts
 - Spark engine management tools:
   - `create_spark_engine` - Create new Spark engines in watsonx.data
   - `update_spark_engine` - Update Spark engine configuration and settings

@@ -8,12 +8,14 @@ Complete reference for all watsonx.data MCP tools.
   - [get_instance_details](#get_instance_details)
 - [Engine Tools](#engine-tools)
   - [list_engines](#list_engines)
+  - [create_presto_engine](#create_presto_engine)
   - [create_spark_engine](#create_spark_engine)
+  - [update_presto_engine](#update_presto_engine)
   - [update_spark_engine](#update_spark_engine)
   - [restart_presto_engine](#restart_presto_engine)
   - [pause_presto_engine](#pause_presto_engine)
   - [resume_presto_engine](#resume_presto_engine)
-  - [update_presto_engine](#update_presto_engine)
+  - [scale_presto_engine](#scale_presto_engine)
   - [pause_spark_engine](#pause_spark_engine)
   - [resume_spark_engine](#resume_spark_engine)
 - [Catalog Tools](#catalog-tools)
@@ -177,6 +179,50 @@ Presto Engines (2):
 - Select appropriate engine for workload
 - Monitor engine health
 
+
+### create_presto_engine
+
+Create a new Presto engine in watsonx.data.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `origin` (string, required): Engine origin - "native", "external", or "discover"
+- `display_name` (string, required): Display name for the engine
+- `configuration` (object, required): Engine configuration with required fields:
+  - `size_config`: "custom" (flexible workers 1-25) OR "starter"/"small"/"medium"/"large" (fixed: 1/3/6/12)
+  - `coordinator`: Coordinator node config with:
+    - `node_type`: Must be "starter", "small", "medium", or "large" (MUST match worker node_type)
+    - `quantity`: Number of coordinator nodes (must be 1)
+  - `worker`: Worker node config with:
+    - `node_type`: Must be "starter", "small", "medium", or "large" (MUST match coordinator node_type)
+    - `quantity`: Number of worker nodes (1-25 for custom, fixed for predefined)
+- `associated_catalogs` (array, optional): List of catalog names to associate
+- `description` (string, optional): Engine description
+- `engine_id` (string, optional): Optional custom engine ID
+- `tags` (array, optional): Tags for the engine
+
+**Returns**:
+- `engine_id` (string): Created engine identifier
+- Full engine configuration
+
+**Important Notes:**
+- **node_type is PERMANENT**: Cannot be changed after engine creation
+- **Coordinator and worker must match**: Both must use the same node_type
+- **Use size_config "custom"**: For flexible worker counts (1-25)
+
+**Example Usage:**
+```
+Create a new Presto engine named "analytics-presto" with custom configuration for the iceberg_data catalog
+```
+
+**Use Cases:**
+- Provision new query engines
+- Set up dedicated engines for specific workloads
+- Create development/testing engines
+
+---
+
 **Best Practice:** Get engine IDs from this tool before using `execute_select`
 
 
@@ -324,6 +370,45 @@ Resume presto-dev for morning workload
 - Quick activation without reconfiguration
 
 **Important**: Engine will start with its previous configuration. May take a few minutes to become fully operational.
+
+
+### scale_presto_engine
+
+Scale a Presto engine by adjusting coordinator and worker node counts.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Presto engine identifier
+- `coordinator_node_type` (string, required): Must be "starter", "small", "medium", or "large" (must match engine's current type)
+- `coordinator_quantity` (int, required): Number of coordinator nodes (must be 1 for Presto)
+- `worker_node_type` (string, required): Must be "starter", "small", "medium", or "large" (must match coordinator_node_type)
+- `worker_quantity` (int, required): Number of worker nodes (1-25)
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `coordinator` (object): Coordinator node configuration
+- `worker` (object): Worker node configuration
+- `message` (string): Operation status message
+
+**Important Limitations:**
+- **API requires BOTH coordinator AND worker configurations**: Cannot scale just one
+- **Cannot change node types**: node_type must match engine's current configuration
+- **Only worker quantity changes**: Typically the only value modified when scaling
+
+**Example Usage:**
+```
+Scale presto-01 from 2 to 5 worker nodes (keeping starter node type)
+```
+
+**Use Cases:**
+- Scale up for heavy query workloads
+- Scale down during low-usage periods
+- Adjust resources based on demand
+
+**Note**: Scaling is a rolling update - engine remains available during the operation.
+
+---
 
 ---
 

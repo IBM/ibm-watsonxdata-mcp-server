@@ -2,7 +2,7 @@
 
 ## Overview
 
-The IBM watsonx.data MCP Server enables AI assistants to interact seamlessly with IBM watsonx.data lakehouses using natural language. It provides 30 specialized tools across 6 categories for comprehensive lakehouse operations:
+The IBM watsonx.data MCP Server enables AI assistants to interact seamlessly with IBM watsonx.data lakehouses using natural language. It provides specialized tools across 6 categories for comprehensive lakehouse operations:
 
 - **Platform Management**: Instance status and configuration
 - **Engine Operations**: Manage and monitor Presto and Spark engines
@@ -16,13 +16,13 @@ Currently, it supports stdio transport mechanism for local subprocess. For compr
 ## Supported Features
 
 ### Core Capabilities
-- **30 Tools** organized into 6 functional categories (see [TOOLS.md](TOOLS.md))
-- **Platform Tools** (1): Instance details and status
-- **Engine Tools** (9): Lifecycle management for Presto and Spark engines
-- **Catalog Tools** (7): Schema and table discovery, metadata operations, DDL operations
-- **Query Tools** (5): SELECT, INSERT, UPDATE execution with query plan analysis
-- **Spark Application Tools** (4): Submit and manage Spark applications
-- **Ingestion Tools** (4): Data loading from object storage (CSV, Parquet, JSON)
+- **Multiple Tools** organized into 6 functional categories (see [TOOLS.md](TOOLS.md))
+- **Platform Tools**: Instance details and status
+- **Engine Tools**: Lifecycle management for Presto and Spark engines
+- **Catalog Tools**: Schema and table discovery, metadata operations, DDL operations
+- **Query Tools**: SELECT, INSERT, UPDATE execution with query plan analysis
+- **Spark Application Tools**: Submit and manage Spark applications
+- **Ingestion Tools**: Data loading from object storage (CSV, Parquet, JSON)
 
 ### Security & Authentication
 - IBM Cloud IAM authentication with automatic token refresh
