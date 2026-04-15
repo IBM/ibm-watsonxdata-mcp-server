@@ -1477,6 +1477,43 @@ Engine: spark-engine-01
 Use get_spark_application_status to monitor progress.
 ```
 
+**Minimal Configuration Examples for IBM Cloud Object Storage:**
+
+1. **Using cos:// protocol:**
+```json
+{
+  "engine_id": "spark398",
+  "application": "cos://bucket.instance/app.py",
+  "arguments": ["cos://bucket.instance/data.csv"],
+  "conf": {
+    "spark.hadoop.fs.cos.instance.endpoint": "s3.direct.us-east.cloud-object-storage.appdomain.cloud",
+    "spark.hadoop.fs.cos.instance.access.key": "your-access-key",
+    "spark.hadoop.fs.cos.instance.secret.key": "your-secret-key"
+  }
+}
+```
+
+2. **Using s3a:// protocol:**
+```json
+{
+  "engine_id": "spark398",
+  "application": "s3a://bucket/app.py",
+  "arguments": ["s3a://bucket/data.csv"],
+  "conf": {
+    "spark.hadoop.fs.s3a.bucket.bucket.access.key": "your-access-key",
+    "spark.hadoop.fs.s3a.bucket.bucket.secret.key": "your-secret-key",
+    "spark.hadoop.fs.s3a.bucket.bucket.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+    "spark.hadoop.fs.s3a.bucket.bucket.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+  }
+}
+```
+
+**Optional Configuration Parameters:**
+- `spark.app.name`: Custom application name
+- `ae.spark.driver.log.level` / `ae.spark.executor.log.level`: Log levels
+- `spark.driver.cores` / `spark.driver.memory`: Driver resources
+- `spark.executor.cores` / `spark.executor.memory`: Executor resources
+
 **Use Cases:**
 - Run ETL/ELT batch processing jobs
 - Execute data transformation pipelines

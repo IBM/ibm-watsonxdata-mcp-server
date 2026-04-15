@@ -46,8 +46,48 @@ async def submit_spark_application(
 
     Returns:
         Dict with application_id, state, and submission details
+
+    Examples:
+        Minimal configuration for IBM Cloud Object Storage using cos:// protocol:
+        
+        {
+          "engine_id": "spark398",
+          "application": "cos://bucket.instance/app.py",
+          "arguments": ["cos://bucket.instance/data.csv"],
+          "conf": {
+            "spark.hadoop.fs.cos.instance.endpoint": "s3.direct.us-east.cloud-object-storage.appdomain.cloud",
+            "spark.hadoop.fs.cos.instance.access.key": "your-access-key",
+            "spark.hadoop.fs.cos.instance.secret.key": "your-secret-key"
+          }
+        }
+
+        Minimal configuration for IBM Cloud Object Storage using s3a:// protocol:
+        
+        {
+          "engine_id": "spark398",
+          "application": "s3a://bucket/app.py",
+          "arguments": ["s3a://bucket/data.csv"],
+          "conf": {
+            "spark.hadoop.fs.s3a.bucket.bucket.access.key": "your-access-key",
+            "spark.hadoop.fs.s3a.bucket.bucket.secret.key": "your-secret-key",
+            "spark.hadoop.fs.s3a.bucket.bucket.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+            "spark.hadoop.fs.s3a.bucket.bucket.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+          }
+        }
+
+        Optional conf parameters (uses engine defaults if not specified):
+        - spark.app.name: Custom application name
+        - ae.spark.driver.log.level / ae.spark.executor.log.level: Log levels
+        - spark.driver.cores / spark.driver.memory: Driver resources
+        - spark.executor.cores / spark.executor.memory: Executor resources
     """
     watsonx_client = ctx.fastmcp.watsonx_client
+
+    # If name is provided, add it to conf as spark.app.name instead of top-level
+    if name is not None:
+        if conf is None:
+            conf = {}
+        conf["spark.app.name"] = name
 
     # Build application_details object
     application_details: dict[str, Any] = {
@@ -59,8 +99,6 @@ async def submit_spark_application(
         application_details["conf"] = conf
     if env is not None:
         application_details["env"] = env
-    if name is not None:
-        application_details["name"] = name
 
     # Build request body
     body: dict[str, Any] = {
