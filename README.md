@@ -11,7 +11,9 @@ The IBM watsonx.data MCP Server enables AI assistants to interact seamlessly wit
 - **Spark Applications**: Submit, monitor, and manage Spark jobs
 - **Data Ingestion**: Load data from object storage into lakehouse tables
 
-Currently, it supports stdio transport mechanism for local subprocess. For comprehensive details on transport options, including implementation guidelines and security best practices, refer to the [MCP Transports Specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+Currently, it supports stdio transport for local subprocess and streamable HTTP. For comprehensive details on transport options, including implementation guidelines and security best practices, refer to the [MCP Transports Specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+
+**Note:** IBM watsonx.data also provides a hosted remote MCP server that requires no installation. For details on using the remote server, see the [Remote Querying Documentation](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-remote-querying-data-ai-end).
 
 ## Supported Features
 
@@ -29,8 +31,7 @@ Currently, it supports stdio transport mechanism for local subprocess. For compr
 - Read and write operations with appropriate access controls
 
 ### Transport & Integration
-- **Current**: stdio transport for local subprocess communication
-- **Planned**: Streamable HTTP transport for remote deployments
+- **Current**: stdio transport, streamable HTTP
 - Compatible with Claude Desktop, IBM Bob, and other MCP-enabled AI assistants
 
 
@@ -244,6 +245,14 @@ Then use that path in your config:
 }
 ```
 
+#### Running with Streamable HTTP Transport
+
+For remote access or HTTP-based integrations:
+
+```bash
+uv run python -m lakehouse_mcp --transport streamable-http --host 0.0.0.0 --port 9000
+```
+
 ## Available Tools
 ### Quick Reference
 
@@ -389,7 +398,7 @@ I need to analyze customer data. What's available and what does it look like?
 6. Looks at the related tables
 7. Presents a summary 
 
-See [TOOLS.md](TOOLS.md) for more usage patterns and advanced examples.
+See [TOOLS.md](TOOLS.md) for the complete list of tools, more usage patterns, and advanced examples.
 
 ## Development
 
@@ -463,7 +472,8 @@ uv run pre-commit run --all-files
 ```
 
 ## Troubleshooting
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | for common issues, diagnostics, and solutions
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues, diagnostics, and solutions.
 
 ## Useful Links
 

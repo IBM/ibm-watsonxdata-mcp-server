@@ -70,8 +70,7 @@ async def submit_spark_application(
           "conf": {
             "spark.hadoop.fs.s3a.bucket.bucket.access.key": "your-access-key",
             "spark.hadoop.fs.s3a.bucket.bucket.secret.key": "your-secret-key",
-            "spark.hadoop.fs.s3a.bucket.bucket.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
-            "spark.hadoop.fs.s3a.bucket.bucket.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+            "spark.hadoop.fs.s3a.bucket.bucket.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
           }
         }
 
