@@ -29,16 +29,19 @@ async def create_presto_engine(
 ) -> dict[str, Any]:
     """Create a new Presto engine in watsonx.data.
 
-    IMPORTANT: The node_type is PERMANENT and cannot be changed after creation. Use size_config "custom"
+    IMPORTANT: The node_type cannot be changed after creation. Use size_config "custom"
     for flexible worker counts (1-25). Coordinator and worker MUST use the same node_type.
+    some watsonx.data instances may only support size_config "custom" and
+    reject predefined size configs ("starter"/"small"/"medium"/"large" fixed: 1/3/6/12) with "invalid coordinator node type" errors.
+    If you encounter this error, use size_config "custom" with your desired node_type and worker quantity.
 
     Args:
         origin: Engine origin - must be "native" for v3 API
         display_name: Display name for the engine
         configuration: Engine configuration with required fields:
-            - size_config: "custom" (flexible workers 1-25) OR "starter"/"small"/"medium"/"large" (fixed: 1/3/6/12)
-            - coordinator: {"node_type": "starter"/"small"/"medium"/"large", "quantity": 1}
-            - worker: {"node_type": MUST match coordinator, "quantity": 1-25 for custom, fixed for predefined}
+            - size_config: "custom" (recommended - flexible workers 1-25) OR "starter"/"small"/"medium"/"large" (may not be supported)
+            - coordinator: node_type must be "starter"/"small"/"medium"/"large", quantity must be 1
+            - worker: "node_type": MUST match coordinator, "quantity": 1-25 for custom, fixed (1/3/6/12) if using non custom size_config
         associated_catalogs: List of catalog names to associate
         description: Engine description
         engine_id: Optional custom engine ID (must match pattern: presto-0 to presto-1000)
