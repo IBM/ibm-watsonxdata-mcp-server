@@ -46,16 +46,28 @@ async def execute_insert(
 
     # Validate SQL is not empty
     if not sql or not sql.strip():
-        raise ValueError("SQL query cannot be empty")
+        return {
+            "error": True,
+            "error_message": "SQL query cannot be empty",
+            "status_code": 400,
+        }
 
     # Validate query is an INSERT statement
     sql_trimmed = sql.strip().upper()
     if not sql_trimmed.startswith("INSERT"):
-        raise ValueError("Only INSERT queries are allowed. Query must start with INSERT keyword.")
+        return {
+            "error": True,
+            "error_message": "Only INSERT queries are allowed. Query must start with INSERT keyword.",
+            "status_code": 400,
+        }
 
     # Check for unsafe operations (semicolon-separated statements, etc.)
     if ";" in sql.rstrip(";"):
-        raise ValueError("Multiple statements not allowed. Query must be a single INSERT statement.")
+        return {
+            "error": True,
+            "error_message": "Multiple statements not allowed. Query must be a single INSERT statement.",
+            "status_code": 400,
+        }
 
     logger.info(
         "executing_insert_query",

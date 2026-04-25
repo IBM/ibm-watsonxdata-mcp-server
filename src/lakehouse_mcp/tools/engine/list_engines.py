@@ -34,7 +34,11 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
 
     # Validate engine_type
     if engine_type and engine_type not in ("presto", "spark"):
-        raise ValueError(f"Invalid engine_type: {engine_type}. Must be 'presto', 'spark', or None")
+        return {
+            "error": True,
+            "error_message": f"Invalid engine_type: {engine_type}. Must be 'presto', 'spark', or None",
+            "status_code": 400,
+        }
 
     logger.info("listing_engines", engine_type=engine_type)
 

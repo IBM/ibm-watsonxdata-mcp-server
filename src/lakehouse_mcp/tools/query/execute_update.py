@@ -46,16 +46,28 @@ async def execute_update(
 
     # Validate SQL is not empty
     if not sql or not sql.strip():
-        raise ValueError("SQL query cannot be empty")
+        return {
+            "error": True,
+            "error_message": "SQL query cannot be empty",
+            "status_code": 400,
+        }
 
     # Validate query is an UPDATE statement
     sql_trimmed = sql.strip().upper()
     if not sql_trimmed.startswith("UPDATE"):
-        raise ValueError("Only UPDATE queries are allowed. Query must start with UPDATE keyword.")
+        return {
+            "error": True,
+            "error_message": "Only UPDATE queries are allowed. Query must start with UPDATE keyword.",
+            "status_code": 400,
+        }
 
     # Check for unsafe operations (semicolon-separated statements, etc.)
     if ";" in sql.rstrip(";"):
-        raise ValueError("Multiple statements not allowed. Query must be a single UPDATE statement.")
+        return {
+            "error": True,
+            "error_message": "Multiple statements not allowed. Query must be a single UPDATE statement.",
+            "status_code": 400,
+        }
 
     logger.info(
         "executing_update_query",
