@@ -29,22 +29,31 @@ async def create_presto_engine(
 ) -> dict[str, Any]:
     """Create a new Presto engine in watsonx.data.
 
-    IMPORTANT: The node_type cannot be changed after creation. Use size_config "custom"
-    for flexible worker counts (1-25). Coordinator and worker MUST use the same node_type.
-    some watsonx.data instances may only support size_config "custom" and
-    reject predefined size configs ("starter"/"small"/"medium"/"large" fixed: 1/3/6/12) with "invalid coordinator node type" errors.
-    If you encounter this error, use size_config "custom" with your desired node_type and worker quantity.
+    VALID NODE TYPES: Only "starter" and "cache_optimized" are valid.
+    
+    PREDEFINED SIZE CONFIGS (If any of this size config payload are not matching, it will fail):
+    - starter: 1 coordinator + 1 worker (both "starter" node_type)
+    - small: 1 coordinator + 3 workers (both "cache_optimized" node_type)
+    - medium: 1 coordinator + 6 workers (both "cache_optimized" node_type)
+    - large: 1 coordinator + 12 workers (both "cache_optimized" node_type)
+    
+    CUSTOM SIZE CONFIG:
+    - Coordinator: 1 node (always), node_type: "starter" or "cache_optimized"
+    - Worker: 1-18 nodes, node_type: "starter" or "cache_optimized"
+    - Node types do NOT need to match (e.g., starter coordinator + cache_optimized worker is allowed)
+    
+    NOTE: Node types CAN be changed later during scaling operations.
 
     Args:
         origin: Engine origin - must be "native" for v3 API
         display_name: Display name for the engine
         configuration: Engine configuration with required fields:
-            - size_config: "custom" (recommended - flexible workers 1-25) OR "starter"/"small"/"medium"/"large" (may not be supported)
-            - coordinator: node_type must be "starter"/"small"/"medium"/"large", quantity must be 1
-            - worker: "node_type": MUST match coordinator, "quantity": 1-25 for custom, fixed (1/3/6/12) if using non custom size_config
+            - size_config: "starter"/"small"/"medium"/"large" (predefined) OR "custom" (flexible)
+            - coordinator: {"node_type": "starter" or "cache_optimized", "quantity": 1}
+            - worker: {"node_type": "starter" or "cache_optimized", "quantity": varies by size_config}
         associated_catalogs: List of catalog names to associate
         description: Engine description
-        engine_id: Optional custom engine ID (must match pattern: presto-0 to presto-1000)
+        engine_id: Optional custom engine ID (must match pattern: presto-0 through presto-1000)
         tags: Tags for the engine
 
     Returns:
@@ -54,44 +63,69 @@ async def create_presto_engine(
 
     # Validate configuration structure
     if "size_config" not in configuration:
-        raise ValueError("configuration must include 'size_config'")
+        return {
+            "error": True,
+            "error_message": "configuration must include 'size_config'",
+            "status_code": 400,
+        }
     if "coordinator" not in configuration:
-        raise ValueError("configuration must include 'coordinator' with 'node_type' and 'quantity'")
+        return {
+            "error": True,
+            "error_message": "configuration must include 'coordinator' with 'node_type' and 'quantity'",
+            "status_code": 400,
+        }
     if "worker" not in configuration:
-        raise ValueError("configuration must include 'worker' with 'node_type' and 'quantity'")
+        return {
+            "error": True,
+            "error_message": "configuration must include 'worker' with 'node_type' and 'quantity'",
+            "status_code": 400,
+        }
 
     # Validate coordinator
     coordinator = configuration.get("coordinator", {})
     if "node_type" not in coordinator or "quantity" not in coordinator:
-        raise ValueError("coordinator must have 'node_type' and 'quantity'")
+        return {
+            "error": True,
+            "error_message": "coordinator must have 'node_type' and 'quantity'",
+            "status_code": 400,
+        }
     if coordinator["quantity"] != 1:
-        raise ValueError(f"coordinator quantity must be 1 for Presto, got {coordinator['quantity']}")
+        return {
+            "error": True,
+            "error_message": f"coordinator quantity must be 1 for Presto, got {coordinator['quantity']}",
+            "status_code": 400,
+        }
 
     # Validate worker
     worker = configuration.get("worker", {})
     if "node_type" not in worker or "quantity" not in worker:
-        raise ValueError("worker must have 'node_type' and 'quantity'")
+        return {
+            "error": True,
+            "error_message": "worker must have 'node_type' and 'quantity'",
+            "status_code": 400,
+        }
     worker_qty = worker["quantity"]
-    if worker_qty < 1 or worker_qty > 25:
-        raise ValueError(f"worker quantity must be between 1 and 25, got {worker_qty}")
+    if worker_qty < 1 or worker_qty > 18:
+        return {
+            "error": True,
+            "error_message": f"worker quantity must be between 1 and 18, got {worker_qty}",
+            "status_code": 400,
+        }
 
     # Validate node types
-    valid_node_types = ["starter", "small", "medium", "large"]
+    valid_node_types = ["starter", "cache_optimized"]
     if coordinator["node_type"] not in valid_node_types:
-        raise ValueError(
-            f"coordinator node_type must be one of {valid_node_types}, got '{coordinator['node_type']}'"
-        )
+        return {
+            "error": True,
+            "error_message": f"coordinator node_type must be one of {valid_node_types}, got '{coordinator['node_type']}'",
+            "status_code": 400,
+        }
     if worker["node_type"] not in valid_node_types:
-        raise ValueError(
-            f"worker node_type must be one of {valid_node_types}, got '{worker['node_type']}'"
-        )
-    
-    # Validate that coordinator and worker use the same node type
-    if coordinator["node_type"] != worker["node_type"]:
-        raise ValueError(
-            f"coordinator and worker must use the same node_type. "
-            f"Got coordinator='{coordinator['node_type']}', worker='{worker['node_type']}'"
-        )
+        return {
+            "error": True,
+            "error_message": f"worker node_type must be one of {valid_node_types}, got '{worker['node_type']}'",
+            "status_code": 400,
+        }
 
     # Build request body according to API v3 schema
     body: dict[str, Any] = {

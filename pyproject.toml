@@ -53,8 +53,9 @@ dependencies = [
     "opentelemetry-sdk>=1.27.0",
     "opentelemetry-instrumentation-httpx>=0.48b0",
     "structlog>=24.0.0",
-    "authlib>=1.6.9",
+    "authlib>=1.6.11",
     "cryptography>=46.0.7",
+    "python-multipart>=0.0.26",
 ]
 
 [project.optional-dependencies]

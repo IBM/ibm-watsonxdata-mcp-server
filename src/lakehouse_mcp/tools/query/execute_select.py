@@ -50,11 +50,19 @@ async def execute_select(
     # Validate query is a SELECT statement
     sql_trimmed = sql.strip().upper()
     if not sql_trimmed.startswith("SELECT"):
-        raise ValueError("Only SELECT queries are allowed. Query must start with SELECT keyword.")
+        return {
+            "error": True,
+            "error_message": "Only SELECT queries are allowed. Query must start with SELECT keyword.",
+            "status_code": 400,
+        }
 
     # Check for unsafe operations (semicolon-separated statements, etc.)
     if ";" in sql.rstrip(";"):
-        raise ValueError("Multiple statements not allowed. Query must be a single SELECT statement.")
+        return {
+            "error": True,
+            "error_message": "Multiple statements not allowed. Query must be a single SELECT statement.",
+            "status_code": 400,
+        }
 
     # Apply limit if not present in query
     # Default to 500 if no limit specified to prevent large result sets

@@ -27,17 +27,22 @@ async def scale_presto_engine(
 ) -> dict[str, Any]:
     """Scale a Presto engine by adjusting coordinator and worker node counts in watsonx.data.
 
-    IMPORTANT LIMITATIONS:
-    1. API requires BOTH coordinator AND worker configurations together.
-    2. You CANNOT change node types when scaling - must match engine's current node type.
-    3. You can only change worker quantity within the same node type tier.
+    VALID NODE TYPES: Only "starter" and "cache_optimized" are valid.
+
+    SCALING CAPABILITIES:
+    - Coordinator quantity: Always 1 (cannot be changed)
+    - Worker quantity: 1-18 nodes
+    - Node types CAN be changed during scaling (e.g., from "starter" to "cache_optimized")
+    - Coordinator and worker do NOT need to match node types
+
+    API REQUIREMENT: Must provide BOTH coordinator AND worker configurations together.
 
     Args:
         engine_id: Engine identifier
-        coordinator_node_type: Must be "starter", "small", "medium", or "large". Must match engine's current type.
+        coordinator_node_type: Must be "starter" or "cache_optimized". Can be different from current type.
         coordinator_quantity: Number of coordinator nodes (must be 1 for Presto)
-        worker_node_type: Must be "starter", "small", "medium", or "large". Must match coordinator_node_type.
-        worker_quantity: Number of worker nodes (1-25). Typically the only value changed when scaling.
+        worker_node_type: Must be "starter" or "cache_optimized". Can be different from coordinator_node_type.
+        worker_quantity: Number of worker nodes (1-18). Can be changed during scaling.
 
     Returns:
         Dict with scaling operation status and new node configuration
@@ -46,29 +51,33 @@ async def scale_presto_engine(
 
     # Validate inputs
     if coordinator_quantity != 1:
-        raise ValueError(f"coordinator_quantity must be 1 for Presto engines, got {coordinator_quantity}")
+        return {
+            "error": True,
+            "error_message": f"coordinator_quantity must be 1 for Presto engines, got {coordinator_quantity}",
+            "status_code": 400,
+        }
     
-    if worker_quantity < 1 or worker_quantity > 25:
-        raise ValueError(f"worker_quantity must be between 1 and 25, got {worker_quantity}")
+    if worker_quantity < 1 or worker_quantity > 18:
+        return {
+            "error": True,
+            "error_message": f"worker_quantity must be between 1 and 18, got {worker_quantity}",
+            "status_code": 400,
+        }
 
     # Validate node types
-    valid_node_types = ["starter", "small", "medium", "large"]
+    valid_node_types = ["starter", "cache_optimized"]
     if coordinator_node_type not in valid_node_types:
-        raise ValueError(
-            f"coordinator_node_type must be one of {valid_node_types}, got '{coordinator_node_type}'"
-        )
+        return {
+            "error": True,
+            "error_message": f"coordinator_node_type must be one of {valid_node_types}, got '{coordinator_node_type}'",
+            "status_code": 400,
+        }
     if worker_node_type not in valid_node_types:
-        raise ValueError(
-            f"worker_node_type must be one of {valid_node_types}, got '{worker_node_type}'"
-        )
-    
-    # Validate that coordinator and worker use the same node type
-    if coordinator_node_type != worker_node_type:
-        raise ValueError(
-            f"coordinator_node_type and worker_node_type must match. "
-            f"Got coordinator='{coordinator_node_type}', worker='{worker_node_type}'. "
-            f"You cannot change node types when scaling - only worker quantity can be adjusted."
-        )
+        return {
+            "error": True,
+            "error_message": f"worker_node_type must be one of {valid_node_types}, got '{worker_node_type}'",
+            "status_code": 400,
+        }
 
     # Build request body - API requires both coordinator and worker
     body: dict[str, Any] = {

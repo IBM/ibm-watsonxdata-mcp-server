@@ -120,7 +120,15 @@ class WatsonXClient:
             if response.status_code >= 400:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
+                    # Build comprehensive error message including all available fields
+                    error_parts = []
+                    if "message" in error_data:
+                        error_parts.append(f"Message: {error_data['message']}")
+                    if "exception" in error_data:
+                        error_parts.append(f"Exception: {error_data['exception']}")
+                    if "message_code" in error_data:
+                        error_parts.append(f"Code: {error_data['message_code']}")
+                    error_msg = " | ".join(error_parts) if error_parts else str(error_data)
                     logger.error("watsonx_get_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
                     
                     # Return error as data instead of raising exception
@@ -189,7 +197,15 @@ class WatsonXClient:
                 # Try to get error details from response body
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
+                    # Build comprehensive error message including all available fields
+                    error_parts = []
+                    if "message" in error_data:
+                        error_parts.append(f"Message: {error_data['message']}")
+                    if "exception" in error_data:
+                        error_parts.append(f"Exception: {error_data['exception']}")
+                    if "message_code" in error_data:
+                        error_parts.append(f"Code: {error_data['message_code']}")
+                    error_msg = " | ".join(error_parts) if error_parts else str(error_data)
                     logger.error("watsonx_post_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
                     return {
                         "error": True,
@@ -264,7 +280,15 @@ class WatsonXClient:
             if response.status_code >= 400:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
+                    # Build comprehensive error message including all available fields
+                    error_parts = []
+                    if "message" in error_data:
+                        error_parts.append(f"Message: {error_data['message']}")
+                    if "exception" in error_data:
+                        error_parts.append(f"Exception: {error_data['exception']}")
+                    if "message_code" in error_data:
+                        error_parts.append(f"Code: {error_data['message_code']}")
+                    error_msg = " | ".join(error_parts) if error_parts else str(error_data)
                     logger.error("watsonx_patch_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
                     return {
                         "error": True,
@@ -333,7 +357,15 @@ class WatsonXClient:
             if response.status_code >= 400:
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("message", error_data.get("exception", str(error_data)))
+                    # Build comprehensive error message including all available fields
+                    error_parts = []
+                    if "message" in error_data:
+                        error_parts.append(f"Message: {error_data['message']}")
+                    if "exception" in error_data:
+                        error_parts.append(f"Exception: {error_data['exception']}")
+                    if "message_code" in error_data:
+                        error_parts.append(f"Code: {error_data['message_code']}")
+                    error_msg = " | ".join(error_parts) if error_parts else str(error_data)
                     logger.error("watsonx_delete_error", url=url, status_code=response.status_code, error=error_msg, response=error_data)
                     return {
                         "error": True,

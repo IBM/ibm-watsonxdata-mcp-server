@@ -155,24 +155,7 @@ class TestExecuteSelect:
         ]
 
         for query in invalid_queries:
-            with pytest.raises(ValueError) as exc_info:
-                await execute_select(
-                    mock_context,
-                    sql=query,
-                    catalog_name="iceberg_data",
-                    schema_name="sales_db",
-                    engine_id="presto-01",
-                )
-
-            assert "Only SELECT queries are allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_execute_select_multiple_statements_rejected(self, mock_context):
-        """Test that multiple statements are rejected."""
-        query = "SELECT * FROM customers; DROP TABLE customers;"
-
-        with pytest.raises(ValueError) as exc_info:
-            await execute_select(
+            result = await execute_select(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -180,7 +163,26 @@ class TestExecuteSelect:
                 engine_id="presto-01",
             )
 
-        assert "Multiple statements not allowed" in str(exc_info.value)
+            assert result.get("error") is True
+            assert "Only SELECT queries are allowed" in result.get("error_message", "")
+            assert result.get("status_code") == 400
+
+    @pytest.mark.asyncio
+    async def test_execute_select_multiple_statements_rejected(self, mock_context):
+        """Test that multiple statements are rejected."""
+        query = "SELECT * FROM customers; DROP TABLE customers;"
+
+        result = await execute_select(
+            mock_context,
+            sql=query,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result.get("error") is True
+        assert "Multiple statements not allowed" in result.get("error_message", "")
+        assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_execute_select_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -634,24 +636,7 @@ class TestExecuteInsert:
         ]
 
         for query in invalid_queries:
-            with pytest.raises(ValueError) as exc_info:
-                await execute_insert(
-                    mock_context,
-                    sql=query,
-                    catalog_name="iceberg_data",
-                    schema_name="sales_db",
-                    engine_id="presto-01",
-                )
-
-            assert "Only INSERT queries are allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_execute_insert_multiple_statements_rejected(self, mock_context):
-        """Test that multiple statements are rejected."""
-        query = "INSERT INTO customers VALUES (1, 'test'); DROP TABLE customers;"
-
-        with pytest.raises(ValueError) as exc_info:
-            await execute_insert(
+            result = await execute_insert(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -659,7 +644,26 @@ class TestExecuteInsert:
                 engine_id="presto-01",
             )
 
-        assert "Multiple statements not allowed" in str(exc_info.value)
+            assert result.get("error") is True
+            assert "Only INSERT queries are allowed" in result.get("error_message", "")
+            assert result.get("status_code") == 400
+
+    @pytest.mark.asyncio
+    async def test_execute_insert_multiple_statements_rejected(self, mock_context):
+        """Test that multiple statements are rejected."""
+        query = "INSERT INTO customers VALUES (1, 'test'); DROP TABLE customers;"
+
+        result = await execute_insert(
+            mock_context,
+            sql=query,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result.get("error") is True
+        assert "Multiple statements not allowed" in result.get("error_message", "")
+        assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_execute_insert_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -720,16 +724,17 @@ class TestExecuteInsert:
     @pytest.mark.asyncio
     async def test_execute_insert_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            await execute_insert(
-                mock_context,
-                sql="",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_insert(
+            mock_context,
+            sql="",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "SQL query cannot be empty" in str(exc_info.value)
+        assert result.get("error") is True
+        assert "SQL query cannot be empty" in result.get("error_message", "")
+        assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_execute_insert_polling_through_states(self, mock_context, watsonx_client, respx_mock):
@@ -888,24 +893,7 @@ class TestExecuteUpdate:
         ]
 
         for query in invalid_queries:
-            with pytest.raises(ValueError) as exc_info:
-                await execute_update(
-                    mock_context,
-                    sql=query,
-                    catalog_name="iceberg_data",
-                    schema_name="sales_db",
-                    engine_id="presto-01",
-                )
-
-            assert "Only UPDATE queries are allowed" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_execute_update_multiple_statements_rejected(self, mock_context):
-        """Test that multiple statements are rejected."""
-        query = "UPDATE customers SET name = 'test'; DROP TABLE customers;"
-
-        with pytest.raises(ValueError) as exc_info:
-            await execute_update(
+            result = await execute_update(
                 mock_context,
                 sql=query,
                 catalog_name="iceberg_data",
@@ -913,7 +901,26 @@ class TestExecuteUpdate:
                 engine_id="presto-01",
             )
 
-        assert "Multiple statements not allowed" in str(exc_info.value)
+            assert result.get("error") is True
+            assert "Only UPDATE queries are allowed" in result.get("error_message", "")
+            assert result.get("status_code") == 400
+
+    @pytest.mark.asyncio
+    async def test_execute_update_multiple_statements_rejected(self, mock_context):
+        """Test that multiple statements are rejected."""
+        query = "UPDATE customers SET name = 'test'; DROP TABLE customers;"
+
+        result = await execute_update(
+            mock_context,
+            sql=query,
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        assert result.get("error") is True
+        assert "Multiple statements not allowed" in result.get("error_message", "")
+        assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_execute_update_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -974,16 +981,17 @@ class TestExecuteUpdate:
     @pytest.mark.asyncio
     async def test_execute_update_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
-        with pytest.raises(ValueError) as exc_info:
-            await execute_update(
-                mock_context,
-                sql="",
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
+        result = await execute_update(
+            mock_context,
+            sql="",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
 
-        assert "SQL query cannot be empty" in str(exc_info.value)
+        assert result.get("error") is True
+        assert "SQL query cannot be empty" in result.get("error_message", "")
+        assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_execute_update_polling_through_states(self, mock_context, watsonx_client, respx_mock):
