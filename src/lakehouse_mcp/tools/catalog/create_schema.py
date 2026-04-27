@@ -28,10 +28,15 @@ async def create_schema(
 ) -> dict[str, Any]:
     """Create a new schema in a watsonx.data catalog.
 
+    IMPORTANT RESTRICTIONS:
+        - Engine must be a Presto or Prestissimo engine (Spark engines are not supported)
+        - Catalog must be an object storage catalog (Iceberg or Hive format)
+        - Datasource catalogs (e.g., from external databases) are NOT supported for schema creation
+
     Args:
-        catalog_id: Catalog identifier (e.g., "iceberg_data")
+        catalog_id: Catalog identifier - must be an object storage catalog (e.g., "iceberg_data", "hive_data")
         schema_name: Name for the new schema
-        engine_id: Engine ID to use for the operation (from list_engines)
+        engine_id: Engine ID to use for the operation - must be a Presto or Prestissimo engine (from list_engines)
         custom_path: Path within bucket where schema will be created (REQUIRED, must be at least 1 character).
                      If unsure, use the schema_name as the custom_path.
         storage_name: Storage/bucket name for the schema (REQUIRED for object storage catalogs)
@@ -42,6 +47,12 @@ async def create_schema(
         - catalog_name: Parent catalog name
         - custom_path: Custom path if specified
         - storage_name: Storage name if specified
+        
+    Raises:
+        Error if:
+        - Engine is not Presto or Prestissimo type
+        - Catalog is a datasource catalog (not object storage)
+        - custom_path is empty or storage_name is not provided
     """
     watsonx_client = ctx.fastmcp.watsonx_client
 
