@@ -34,13 +34,17 @@ async def describe_table(
 
     Returns:
         Dict with:
-        - table_name, catalog_name, schema_name, table_type
-        - columns: List with column_name, data_type, nullable, comment, ordinal_position
-        - column_count: Total columns
-        - primary_keys: List of PK column names
-        - partitions: List of partition columns
-        - properties: Table properties (format, compression, etc.)
-        - statistics: row_count, size_bytes, created_on, last_modified
+        - name: Table name
+        - catalog_name, schema_name: Echo of inputs
+        - columns: List of column objects with:
+          - name: Column name (required)
+          - type: SQL data type (required)
+          - comment: Optional comment/description
+          - extra: Optional extra attributes (e.g., AUTO_INCREMENT)
+          - length: Optional length for VARCHAR/CHAR types
+          - precision: Optional precision for DECIMAL types
+          - scale: Optional scale for DECIMAL types
+        - column_count: Total number of columns
         - engine_id: Echo of input
     """
     watsonx_client = ctx.fastmcp.watsonx_client
@@ -72,45 +76,46 @@ async def describe_table(
         }
 
     # Extract table information
-    table_info = response.get("table", response) or {}
+    # API returns: {"name": "table_name", "columns": [...]}
+    name = response.get("name", table_name)
+    columns_raw = response.get("columns", []) or []
 
-    # Process columns
+    # Process columns - only include fields that API actually provides
     columns = []
-    for col in (table_info.get("columns", []) or []):
+    for col in columns_raw:
         column_info = {
-            "column_name": col.get("column_name", col.get("name")),
-            "data_type": col.get("data_type", col.get("type")),
-            "nullable": col.get("nullable", col.get("is_nullable", True)),
-            "comment": col.get("comment", col.get("description")),
-            "ordinal_position": col.get("ordinal_position", col.get("position")),
+            "name": col.get("name"),
+            "type": col.get("type"),
         }
+        
+        # Only add optional fields if they have values
+        if col.get("comment"):
+            column_info["comment"] = col["comment"]
+        if col.get("extra"):
+            column_info["extra"] = col["extra"]
+        if col.get("length"):
+            column_info["length"] = col["length"]
+        if col.get("precision"):
+            column_info["precision"] = col["precision"]
+        if col.get("scale"):
+            column_info["scale"] = col["scale"]
+            
         columns.append(column_info)
 
-    # Build result
+    # Build result with only API-provided fields
     result = {
-        "table_name": table_name,
+        "name": name,
         "catalog_name": catalog_name,
         "schema_name": schema_name,
-        "table_type": table_info.get("table_type", "TABLE"),
         "columns": columns,
         "column_count": len(columns),
-        "primary_keys": table_info.get("primary_keys", []),
-        "partitions": table_info.get("partitions", []),
-        "properties": table_info.get("properties", {}),
-        "statistics": {
-            "row_count": table_info.get("row_count"),
-            "size_bytes": table_info.get("size_bytes", table_info.get("size")),
-            "created_on": table_info.get("created_on", table_info.get("created_at")),
-            "last_modified": table_info.get("last_modified", table_info.get("updated_at")),
-        },
         "engine_id": engine_id,
     }
 
     logger.info(
         "table_described",
-        table_name=table_name,
+        table_name=name,
         column_count=len(columns),
-        table_type=result["table_type"],
     )
 
     return result

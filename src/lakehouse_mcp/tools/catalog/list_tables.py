@@ -32,7 +32,7 @@ async def list_tables(
 
     Returns:
         Dict with:
-        - tables: List of table objects with name, type, created_on, row_count, size_bytes, column_count
+        - tables: List of table names (strings)
         - total_count: Number of tables in schema
         - catalog_name, schema_name, engine_id: Echo of inputs
     """
@@ -67,37 +67,11 @@ async def list_tables(
     # The API returns: {"tables": ["table1", "table2", ...]}
     tables = response.get("tables", []) or []
 
-    # Process table information
-    processed_tables = []
-    for table in tables:
-        # API returns simple string array, not objects
-        # We only have the table name from this endpoint
-        if isinstance(table, str):
-            table_info = {
-                "name": table,
-                "type": "TABLE",  # Not provided by this endpoint
-                "created_on": None,  # Not provided by this endpoint
-                "row_count": None,  # Not provided by this endpoint
-                "size_bytes": None,  # Not provided by this endpoint
-                "column_count": 0,  # Not provided by this endpoint
-            }
-        else:
-            # Handle dict response (for backward compatibility or future API changes)
-            table_info = {
-                "name": table.get("table_name", table.get("name")),
-                "type": table.get("table_type", table.get("type", "TABLE")),
-                "created_on": table.get("created_on", table.get("created_at")),
-                "row_count": table.get("row_count"),
-                "size_bytes": table.get("size_bytes", table.get("size")),
-                "column_count": table.get("column_count", len(table.get("columns", []))),
-            }
-        processed_tables.append(table_info)
-
     result = {
         "catalog_name": catalog_name,
         "schema_name": schema_name,
-        "tables": processed_tables,
-        "total_count": len(processed_tables),
+        "tables": tables,
+        "total_count": len(tables),
         "engine_id": engine_id,
     }
 
