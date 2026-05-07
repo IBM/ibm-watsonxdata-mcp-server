@@ -447,6 +447,77 @@ class TestExecuteSelect:
         assert result["row_count"] == 3
         assert result["rows"] == [[1, "Alice"], [2, "Bob"], [3, "Charlie"]]
         assert len(result["columns"]) == 2
+    @pytest.mark.asyncio
+    async def test_execute_select_pagination_accumulates_rows(self, mock_context, watsonx_client, respx_mock):
+        """Test that rows are accumulated across multiple paginated responses."""
+        # First response: RUNNING with first batch of data
+        first_batch_response = {
+            "data": {
+                "id": "query-809",
+                "nextUri": "next-1",
+                "stats": {"state": "RUNNING"},
+                "columns": [
+                    {"name": "id", "type": "bigint"},
+                    {"name": "name", "type": "varchar"},
+                ],
+                "data": [[1, "Alice"], [2, "Bob"]],
+            }
+        }
+
+        # Second response: RUNNING with second batch of data
+        second_batch_response = {
+            "data": {
+                "id": "query-809",
+                "nextUri": "next-2",
+                "stats": {"state": "RUNNING"},
+                "columns": [
+                    {"name": "id", "type": "bigint"},
+                    {"name": "name", "type": "varchar"},
+                ],
+                "data": [[3, "Charlie"], [4, "David"]],
+            }
+        }
+
+        # Third response: FINISHED with final batch
+        final_batch_response = {
+            "data": {
+                "id": "query-809",
+                "nextUri": "",
+                "stats": {"state": "FINISHED"},
+                "columns": [
+                    {"name": "id", "type": "bigint"},
+                    {"name": "name", "type": "varchar"},
+                ],
+                "data": [[5, "Eve"]],
+            }
+        }
+
+        route = respx_mock.post("https://test.watsonx.com/api/v3/v1/statement?engine_id=presto-01")
+        route.side_effect = [
+            httpx.Response(200, json=first_batch_response),
+            httpx.Response(200, json=second_batch_response),
+            httpx.Response(200, json=final_batch_response),
+        ]
+
+        result = await execute_select(
+            mock_context,
+            sql="SELECT id, name FROM customers",
+            catalog_name="iceberg_data",
+            schema_name="sales_db",
+            engine_id="presto-01",
+        )
+
+        # Verify all rows from all batches were accumulated
+        assert result["row_count"] == 5
+        assert result["rows"] == [
+            [1, "Alice"],
+            [2, "Bob"],
+            [3, "Charlie"],
+            [4, "David"],
+            [5, "Eve"],
+        ]
+        assert len(result["columns"]) == 2
+
 
     @pytest.mark.asyncio
     async def test_execute_select_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -1240,16 +1311,17 @@ class TestExplainQuery:
         """Test that invalid engine type is rejected."""
         from lakehouse_mcp.tools.query.explain_query import explain_query
 
-        with pytest.raises(ValueError) as exc_info:
-            await explain_query(
-                mock_context,
-                engine_id="spark-01",
-                statement="SELECT * FROM customers",
-                engine_type="spark",  # Invalid - only presto/prestissimo supported
-            )
+        result = await explain_query(
+            mock_context,
+            engine_id="spark-01",
+            statement="SELECT * FROM customers",
+            engine_type="spark",  # Invalid - only presto/prestissimo supported
+        )
 
-        assert "Invalid engine_type" in str(exc_info.value)
-        assert "Must be 'presto' or 'prestissimo'" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Invalid engine_type" in result["error_message"]
+        assert "Must be 'presto' or 'prestissimo'" in result["error_message"]
+        assert result["status_code"] == 400
 
     @pytest.mark.asyncio
     async def test_explain_query_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -1355,16 +1427,17 @@ class TestExplainAnalyzeQuery:
         """Test that invalid engine type is rejected."""
         from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
 
-        with pytest.raises(ValueError) as exc_info:
-            await explain_analyze_query(
-                mock_context,
-                engine_id="spark-01",
-                statement="SELECT * FROM customers",
-                engine_type="spark",  # Invalid - only presto/prestissimo supported
-            )
+        result = await explain_analyze_query(
+            mock_context,
+            engine_id="spark-01",
+            statement="SELECT * FROM customers",
+            engine_type="spark",  # Invalid - only presto/prestissimo supported
+        )
 
-        assert "Invalid engine_type" in str(exc_info.value)
-        assert "Must be 'presto' or 'prestissimo'" in str(exc_info.value)
+        assert result["error"] is True
+        assert "Invalid engine_type" in result["error_message"]
+        assert "Must be 'presto' or 'prestissimo'" in result["error_message"]
+        assert result["status_code"] == 400
 
     @pytest.mark.asyncio
     async def test_explain_analyze_query_api_error(self, mock_context, watsonx_client, respx_mock):
