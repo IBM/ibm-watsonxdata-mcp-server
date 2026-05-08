@@ -7,8 +7,8 @@ This file has been modified with the assistance of IBM Bob AI tool
 import httpx
 import pytest
 
+from lakehouse_mcp.tools.ingestion.cancel_ingestion_job import cancel_ingestion_job
 from lakehouse_mcp.tools.ingestion.create_ingestion_job import create_ingestion_job
-from lakehouse_mcp.tools.ingestion.delete_ingestion_job import delete_ingestion_job
 from lakehouse_mcp.tools.ingestion.get_ingestion_job import get_ingestion_job
 from lakehouse_mcp.tools.ingestion.list_ingestion_jobs import list_ingestion_jobs
 
@@ -423,26 +423,26 @@ class TestGetIngestionJob:
         assert "start_time" not in result
 
 
-class TestDeleteIngestionJob:
-    """Tests for delete_ingestion_job tool."""
+class TestCancelIngestionJob:
+    """Tests for cancel_ingestion_job tool."""
 
     @pytest.mark.asyncio
-    async def test_delete_job_success(
+    async def test_cancel_job_success(
         self,
         mock_context,
         watsonx_client,
         respx_mock,
     ):
-        """Test successfully deleting an ingestion job."""
+        """Test successfully cancelling an ingestion job."""
         mock_response = {
-            "message": "Ingestion job deleted successfully",
+            "message": "Ingestion job cancelled successfully",
         }
 
         respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-123").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job(
+        result = await cancel_ingestion_job(
             mock_context,
             job_id="job-123",
         )
@@ -450,13 +450,13 @@ class TestDeleteIngestionJob:
         assert "message" in result
 
     @pytest.mark.asyncio
-    async def test_delete_running_job(
+    async def test_cancel_running_job(
         self,
         mock_context,
         watsonx_client,
         respx_mock,
     ):
-        """Test deleting a running ingestion job (should cancel it first)."""
+        """Test cancelling a running ingestion job."""
         mock_response = {
             "message": "Ingestion job cancelled and deleted",
         }
@@ -465,7 +465,7 @@ class TestDeleteIngestionJob:
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job(
+        result = await cancel_ingestion_job(
             mock_context,
             job_id="job-running",
         )
@@ -473,18 +473,18 @@ class TestDeleteIngestionJob:
         assert "message" in result
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_job(
+    async def test_cancel_nonexistent_job(
         self,
         mock_context,
         watsonx_client,
         respx_mock,
     ):
-        """Test deleting a non-existent ingestion job."""
+        """Test cancelling a non-existent ingestion job."""
         respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-nonexistent").mock(
             return_value=httpx.Response(404, json={"message": "Ingestion job not found"})
         )
 
-        result = await delete_ingestion_job(
+        result = await cancel_ingestion_job(
             mock_context,
             job_id="job-nonexistent",
         )
@@ -494,22 +494,22 @@ class TestDeleteIngestionJob:
         assert result["status_code"] == 404
 
     @pytest.mark.asyncio
-    async def test_delete_completed_job(
+    async def test_cancel_completed_job(
         self,
         mock_context,
         watsonx_client,
         respx_mock,
     ):
-        """Test deleting a completed ingestion job."""
+        """Test cancelling a completed ingestion job."""
         mock_response = {
-            "message": "Ingestion job deleted successfully",
+            "message": "Ingestion job cancelled successfully",
         }
 
         respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-completed").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
-        result = await delete_ingestion_job(
+        result = await cancel_ingestion_job(
             mock_context,
             job_id="job-completed",
         )

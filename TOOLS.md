@@ -41,7 +41,7 @@ Complete reference for all watsonx.data MCP tools.
   - [create_ingestion_job](#create_ingestion_job)
   - [list_ingestion_jobs](#list_ingestion_jobs)
   - [get_ingestion_job](#get_ingestion_job)
-  - [delete_ingestion_job](#delete_ingestion_job)
+  - [cancel_ingestion_job](#cancel_ingestion_job)
 - [Usage Patterns](#usage-patterns)
 - [Best Practices](#best-practices)
 
@@ -1931,19 +1931,17 @@ Recommendation:
 
 ---
 
-### delete_ingestion_job
+### cancel_ingestion_job
 
-Cancel a running ingestion job or remove a job from history.
+Cancel a running or accepted ingestion job. This operation cancels ingestion jobs that are in progress.
 
 **Category**: Data Ingestion
-
-**Important**: Jobs in 'failed' or 'completed' status cannot be deleted. Only jobs in 'starting', 'running', or 'queued' status can be deleted.
 
 **Parameters**:
 - `job_id` (string, required): Job identifier
 
 **Returns**:
-- Dict with deletion status
+- Dict with cancellation status
 
 **Example Usage:**
 

@@ -32,8 +32,8 @@ from lakehouse_mcp.tools.engine import (
     update_spark_engine,
 )
 from lakehouse_mcp.tools.ingestion import (
+    cancel_ingestion_job,
     create_ingestion_job,
-    delete_ingestion_job,
     get_ingestion_job,
     list_ingestion_jobs,
 )
@@ -54,11 +54,11 @@ from lakehouse_mcp.tools.spark_applications import (
 
 __all__ = [
     "add_columns",
+    "cancel_ingestion_job",
     "create_ingestion_job",
     "create_presto_engine",
     "create_schema",
     "create_spark_engine",
-    "delete_ingestion_job",
     "describe_table",
     "execute_insert",
     "execute_select",
