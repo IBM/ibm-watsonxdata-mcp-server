@@ -22,21 +22,18 @@ async def delete_ingestion_job(
     ctx: Context,
     job_id: str,
 ) -> dict[str, Any]:
-    """Cancel/delete a data ingestion job.
-
-    Note: Jobs in 'failed' or 'completed' status cannot be deleted.
-    Only jobs in 'starting', 'running', or 'queued' status can be deleted.
+    """Cancel a data ingestion job.
 
     Args:
         job_id: Job identifier
 
     Returns:
-        Dict with deletion status
+        Dict with cancellation status
     """
     watsonx_client = ctx.fastmcp.watsonx_client
 
     logger.info(
-        "deleting_ingestion_job",
+        "cancelling_ingestion_job",
         job_id=job_id,
     )
 
@@ -45,7 +42,7 @@ async def delete_ingestion_job(
 
     # Check for API errors
     if response.get("error"):
-        logger.error("delete_ingestion_job_failed", error=response.get("error_message"))
+        logger.error("cancel_ingestion_job_failed", error=response.get("error_message"))
         return {
             "error": True,
             "error_message": response.get("error_message", "Unknown error"),
@@ -53,7 +50,7 @@ async def delete_ingestion_job(
         }
 
     logger.info(
-        "ingestion_job_deleted",
+        "ingestion_job_cancelled",
         job_id=job_id,
     )
 
