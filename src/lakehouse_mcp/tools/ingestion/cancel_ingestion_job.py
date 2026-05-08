@@ -1,7 +1,7 @@
 """
-Delete ingestion job tool.
+Cancel ingestion job tool.
 
-This tool cancels/deletes a data ingestion job.
+This tool cancels a data ingestion job.
 
 This file has been modified with the assistance of IBM Bob AI tool
 """
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 
 @mcp.tool()
-async def delete_ingestion_job(
+async def cancel_ingestion_job(
     ctx: Context,
     job_id: str,
 ) -> dict[str, Any]:
