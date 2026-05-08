@@ -59,7 +59,6 @@ class TestListEngines:
         assert spark_engines[0]["engine_id"] == "spark-01"
         assert spark_engines[0]["display_name"] == "Spark Engine 1"
         assert spark_engines[0]["type"] == "spark"
-        assert "size" in spark_engines[0]
         assert "created_on" in spark_engines[0]
         assert "associated_catalogs" in spark_engines[0]
 
@@ -584,6 +583,126 @@ class TestScalePrestoEngine:
         assert result["worker"]["quantity"] == 5
 
 
+class TestPrestoEngineLifecycle:
+    """Tests for Presto engine lifecycle operations."""
+
+    @pytest.mark.asyncio
+    async def test_pause_presto_engine_success(
+        self,
+        mock_context,
+        respx_mock,
+    ):
+        """Test successfully pausing a running Presto engine."""
+        from lakehouse_mcp.tools.engine.pause_presto_engine import pause_presto_engine
+
+        # Mock pause operation
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/pause").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "response": {
+                        "message": "Pause Engine",
+                        "message_code": "Success",
+                    }
+                },
+            )
+        )
+
+        result = await pause_presto_engine(mock_context, engine_id="presto-01")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["message"] == "Pause Engine"
+
+    @pytest.mark.asyncio
+    async def test_resume_presto_engine_success(
+        self,
+        mock_context,
+        respx_mock,
+    ):
+        """Test successfully resuming a paused Presto engine."""
+        from lakehouse_mcp.tools.engine.resume_presto_engine import resume_presto_engine
+
+        # Mock resume operation
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/resume").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "message": "Success",
+                    "message_code": "success",
+                },
+            )
+        )
+
+        result = await resume_presto_engine(mock_context, engine_id="presto-01")
+
+        assert result["engine_id"] == "presto-01"
+        assert result["message"] == "Success"
+
+    @pytest.mark.asyncio
+    async def test_scale_presto_engine_success(
+        self,
+        mock_context,
+        respx_mock,
+    ):
+        """Test scaling Presto engine worker quantity."""
+        from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/scale").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "message": "Success",
+                    "coordinator": {"node_type": "starter", "quantity": 1},
+                    "worker": {"node_type": "starter", "quantity": 5},
+                },
+            )
+        )
+
+        result = await scale_presto_engine(
+            mock_context,
+            engine_id="presto-01",
+            coordinator_node_type="starter",
+            coordinator_quantity=1,
+            worker_node_type="starter",
+            worker_quantity=5,
+        )
+
+        assert result["coordinator"]["quantity"] == 1
+        assert result["worker"]["quantity"] == 5
+
+    @pytest.mark.asyncio
+    async def test_scale_presto_engine_change_node_types(
+        self,
+        mock_context,
+        respx_mock,
+    ):
+        """Test that scaling with different node types is allowed."""
+        from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines/presto-01/scale").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "message": "Success",
+                    "coordinator": {"node_type": "cache_optimized", "quantity": 1},
+                    "worker": {"node_type": "starter", "quantity": 3},
+                },
+            )
+        )
+
+        result = await scale_presto_engine(
+            mock_context,
+            engine_id="presto-01",
+            coordinator_node_type="cache_optimized",
+            coordinator_quantity=1,
+            worker_node_type="starter",
+            worker_quantity=3,
+        )
+
+        assert result["coordinator"]["node_type"] == "cache_optimized"
+        assert result["worker"]["node_type"] == "starter"
+
+
 class TestCreateSparkEngine:
     """Tests for create_spark_engine tool."""
 
@@ -754,3 +873,40 @@ class TestUpdateSparkEngine:
 
         assert result["display_name"] == "Updated Spark Engine"
         assert result["description"] == "Updated description"
+
+
+class TestScaleSparkEngine:
+    """Tests for scale_spark_engine tool (SAAS only)."""
+
+    @pytest.mark.asyncio
+    async def test_scale_spark_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully scaling a Spark engine."""
+        from lakehouse_mcp.tools.engine.scale_spark_engine import scale_spark_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/spark_engines/spark-01/scale").mock(
+            return_value=httpx.Response(
+                200,
+                json={"message": "scale spark engine", "number_of_nodes": 10},
+            )
+        )
+
+        result = await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=10)
+
+        assert result["number_of_nodes"] == 10
+
+    @pytest.mark.asyncio
+    async def test_scale_spark_engine_invalid_node_count(self, mock_context, watsonx_client, respx_mock):
+        """Test scaling Spark engine with invalid node count."""
+        from lakehouse_mcp.tools.engine.scale_spark_engine import scale_spark_engine
+
+        # Test too low
+        result = await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=0)
+        assert result.get("error") is True
+        assert "must be between 1 and 1000" in result.get("error_message", "")
+        assert result.get("status_code") == 400
+
+        # Test too high
+        result = await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=1001)
+        assert result.get("error") is True
+        assert "must be between 1 and 1000" in result.get("error_message", "")
+        assert result.get("status_code") == 400

@@ -26,8 +26,8 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
 
     Returns:
         Dict with:
-        - engines: List of engine objects with engine_id, display_name, type, status, size,
-          created_on, created_by, associated_catalogs
+        - engines: List of engine objects with engine_id, display_name, type, status, size (if applicable),
+          created_at, created_by, associated_catalogs
         - summary: Counts by type and status (total_count, presto_count, spark_count, by_status)
     """
     watsonx_client = ctx.fastmcp.watsonx_client
@@ -103,7 +103,7 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
             "type": "presto",
             "status": status,
             "size": engine.get("size_config", "unknown"),
-            "created_on": engine.get("created_on"),
+            "created_on": engine.get("created_at"),
             "created_by": engine.get("created_by", ""),
             "associated_catalogs": engine.get("associated_catalogs", []),
         }
@@ -120,8 +120,7 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
             "display_name": engine.get("engine_display_name", engine.get("display_name", engine.get("name"))),
             "type": "spark",
             "status": status,
-            "size": engine.get("instance_capacity", engine.get("size_config", "unknown")),
-            "created_on": engine.get("created_on"),
+            "created_on": engine.get("created_at"),
             "created_by": engine.get("created_by", ""),
             "associated_catalogs": engine.get("associated_catalogs", []),
         }

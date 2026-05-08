@@ -45,7 +45,7 @@ async def create_schema(
         Dict with:
         - name: Name of the created schema
         - catalog_name: Parent catalog name
-        - custom_path: Custom path if specified
+        - custom_path: Custom path used
         - storage_name: Storage name if specified
         
     Raises:
@@ -58,7 +58,11 @@ async def create_schema(
 
     # Validate custom_path
     if not custom_path or len(custom_path) < 1:
-        raise ValueError("custom_path must be at least 1 character long")
+        return {
+            "error": True,
+            "error_message": "custom_path must be at least 1 character long",
+            "status_code": 400,
+        }
 
     logger.info(
         "creating_schema",
