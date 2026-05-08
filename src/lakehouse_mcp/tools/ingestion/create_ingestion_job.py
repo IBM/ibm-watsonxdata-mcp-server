@@ -49,9 +49,10 @@ async def create_ingestion_job(
         schema: Target schema name
         table: Target table name
         file_paths: Source file path (e.g., "s3://bucket-name/file.csv")
-        file_type: Source file type - "csv", "parquet", "json" (default: "csv")
+        file_type: Source file type - "csv", "parquet", "json", "orc", "avro" (default: "csv")
         bucket_name: S3 bucket name (extracted from file_paths if not provided)
-        bucket_type: Bucket type - "ibm_cos", "aws_s3" (default: "ibm_cos")
+        bucket_type: Bucket type - "amazon_s3", "aws_s3", "minio", "ibm_cos", "ibm_ceph",
+                     "adls_gen1", "adls_gen2", "google_cs", "ibm_storage_scale", "ozone" (default: "ibm_cos")
         write_mode: Write mode - "append", "overwrite" (default: "append")
         engine_id: Spark engine ID to use for ingestion
         field_delimiter: CSV field delimiter (default: ",")

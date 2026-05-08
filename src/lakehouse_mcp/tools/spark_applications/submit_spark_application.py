@@ -28,6 +28,7 @@ async def submit_spark_application(
     job_endpoint: str | None = None,
     service_instance_id: str | None = None,
     type: str | None = None,
+    context_type: str | None = None,
     volumes: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Submit a Spark application for execution on a Spark engine.
@@ -38,11 +39,16 @@ async def submit_spark_application(
         arguments: Application arguments array
         conf: Spark configuration properties (e.g., {"spark.executor.memory": "2g"})
         env: Environment variables
-        name: Application name
+        name: Application name (will be added to conf as spark.app.name)
         job_endpoint: External job endpoint
-        service_instance_id: Service instance ID
-        type: Application type - "iae" or "emr"
-        volumes: Volume mounts for data access
+        service_instance_id: Service instance ID - "iae" or "emr"
+        type: Engine type - "spark" or "gluten"
+        context_type: Context type - "project", "git_project", or "space"
+        volumes: Volume mounts (watsonx.data software only). List of dicts with:
+                 - name: volume name
+                 - mount_path: path in spark cluster (e.g., "/mount/path")
+                 - source_sub_path: path in volume to mount (e.g., "/source/path")
+                 - read_only: boolean flag
 
     Returns:
         Dict with application_id, state, and submission details
@@ -109,6 +115,8 @@ async def submit_spark_application(
         body["service_instance_id"] = service_instance_id
     if type is not None:
         body["type"] = type
+    if context_type is not None:
+        body["context_type"] = context_type
     if volumes is not None:
         body["volumes"] = volumes
 

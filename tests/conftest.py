@@ -151,7 +151,7 @@ def mock_presto_engines_response() -> dict[str, Any]:
                 "id": "presto-01",
                 "display_name": "Presto Engine 1",
                 "status": "running",
-                "created_on": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-15T10:30:00Z",
                 "size_config": "starter",
                 "version": "0.285",
             },
@@ -159,7 +159,7 @@ def mock_presto_engines_response() -> dict[str, Any]:
                 "id": "presto-02",
                 "display_name": "Presto Engine 2",
                 "status": "stopped",
-                "created_on": "2024-01-16T14:20:00Z",
+                "created_at": "2024-01-16T14:20:00Z",
                 "size_config": "small",
                 "version": "0.285",
             },
@@ -180,7 +180,7 @@ def mock_spark_engines_response() -> dict[str, Any]:
                 "id": "spark-01",
                 "display_name": "Spark Engine 1",
                 "status": "running",
-                "created_on": "2024-01-17T09:00:00Z",
+                "created_at": "2024-01-17T09:00:00Z",
                 "spark_version": "3.3.2",
             }
         ]
@@ -218,29 +218,24 @@ def mock_describe_table_response() -> dict[str, Any]:
     """Mock describe table API response.
 
     Returns:
-        Sample describe table API response
+        Sample describe table API response (updated to match actual API)
     """
     return {
+        "name": "customers",
         "columns": [
-            {"name": "id", "type": "bigint", "nullable": False, "comment": "Primary key"},
+            {"name": "id", "type": "bigint", "comment": "Primary key"},
             {
                 "name": "name",
                 "type": "varchar",
-                "nullable": False,
                 "comment": "Customer name",
             },
-            {"name": "email", "type": "varchar", "nullable": True, "comment": None},
+            {"name": "email", "type": "varchar"},
             {
                 "name": "created_at",
                 "type": "timestamp",
-                "nullable": False,
                 "comment": "Creation timestamp",
             },
         ],
-        "partitions": ["created_at"],
-        "primary_keys": [],
-        "properties": {},
-        "table_type": "MANAGED_TABLE",
     }
 
 

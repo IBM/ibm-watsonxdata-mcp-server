@@ -41,6 +41,9 @@ async def execute_update(
         - execution_time_ms: Query duration in milliseconds
         - status: Query execution status
         - catalog_name, schema_name: Echo of inputs
+    Note:
+        Iceberg table updates require at least format version 2 and update mode must be merge-on-read.
+        Use ALTER TABLE to configure: SET PROPERTIES 'format-version' = '2', 'write.update.mode' = 'merge-on-read'
     """
     watsonx_client = ctx.fastmcp.watsonx_client
 
@@ -68,7 +71,7 @@ async def execute_update(
             "error_message": "Multiple statements not allowed. Query must be a single UPDATE statement.",
             "status_code": 400,
         }
-
+    
     logger.info(
         "executing_update_query",
         catalog_name=catalog_name,

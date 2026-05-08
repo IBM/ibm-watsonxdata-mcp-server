@@ -30,8 +30,7 @@ async def list_schemas(
 
     Returns:
         Dict with:
-        - schemas: List of schema objects with schema_name, catalog_name, description,
-          created_on, table_count
+        - schemas: List of schema objects with schema_name, catalog_name
         - total_count: Number of schemas found
         - catalog_name, engine_id: Echo of inputs
     """
@@ -84,9 +83,6 @@ async def list_schemas(
         schema_info = {
             "schema_name": schema_name if isinstance(schema_name, str) else schema_name.get("name", str(schema_name)),
             "catalog_name": catalog_name,
-            "description": None,  # Not provided by this endpoint
-            "created_on": None,  # Not provided by this endpoint
-            "table_count": 0,  # Not provided by this endpoint
         }
         all_schemas.append(schema_info)
 

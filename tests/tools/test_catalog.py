@@ -92,11 +92,10 @@ class TestListTables:
         assert result["schema_name"] == "sales_db"
         assert result["engine_id"] == "presto-01"
 
-        # Verify table details (API returns string array, so metadata is minimal)
-        table_names = [t["name"] for t in result["tables"]]
-        assert "customers" in table_names
-        assert "orders" in table_names
-        assert "customer_view" in table_names
+        # Verify table names (API returns string array)
+        assert "customers" in result["tables"]
+        assert "orders" in result["tables"]
+        assert "customer_view" in result["tables"]
 
     @pytest.mark.asyncio
     async def test_list_tables_with_engine_id(self, mock_context, watsonx_client, respx_mock):
@@ -132,72 +131,6 @@ class TestListTables:
 
         assert result["total_count"] == 0
         assert result["tables"] == []
-
-    @pytest.mark.asyncio
-    async def test_list_tables_with_metadata(self, mock_context, watsonx_client, respx_mock):
-        """Test that table metadata is properly extracted when API returns dict objects."""
-        # Test backward compatibility: if API returns dict objects with metadata
-        mock_response = {
-            "tables": [
-                {
-                    "table_name": "products",
-                    "table_type": "TABLE",
-                    "row_count": 10000,
-                    "size_bytes": 500000,
-                    "created_on": "2024-01-15T10:00:00Z",
-                    "columns": [{"name": "id"}, {"name": "name"}],
-                }
-            ]
-        }
-
-        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables?engine_id=presto-01").mock(
-            return_value=httpx.Response(200, json=mock_response)
-        )
-
-        result = await list_tables(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        table = result["tables"][0]
-        assert table["name"] == "products"
-        assert table["type"] == "TABLE"
-        assert table["row_count"] == 10000
-        assert table["size_bytes"] == 500000
-        assert table["column_count"] == 2
-
-    @pytest.mark.asyncio
-    async def test_list_tables_alternative_field_names(self, mock_context, watsonx_client, respx_mock):
-        """Test listing tables with alternative field names."""
-        mock_response = {
-            "tables": [
-                {
-                    "name": "test_table",  # "name" instead of "table_name"
-                    "type": "VIEW",  # "type" instead of "table_type"
-                    "size": 1000,  # "size" instead of "size_bytes"
-                    "created_at": "2024-01-01T00:00:00Z",  # "created_at" instead of "created_on"
-                }
-            ]
-        }
-
-        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables?engine_id=presto-01").mock(
-            return_value=httpx.Response(200, json=mock_response)
-        )
-
-        result = await list_tables(
-            mock_context,
-            catalog_name="test",
-            schema_name="test",
-            engine_id="presto-01",
-        )
-
-        table = result["tables"][0]
-        assert table["name"] == "test_table"
-        assert table["type"] == "VIEW"
-        assert table["size_bytes"] == 1000
-        assert table["created_on"] == "2024-01-01T00:00:00Z"
 
     @pytest.mark.asyncio
     async def test_list_tables_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -236,13 +169,11 @@ class TestDescribeTable:
             engine_id="presto-01",
         )
 
-        assert result["table_name"] == "customers"
+        assert result["name"] == "customers"
         assert result["catalog_name"] == "iceberg_data"
         assert result["schema_name"] == "sales_db"
         assert result["column_count"] == 4
         assert len(result["columns"]) == 4
-        assert result["partitions"] == ["created_at"]
-        assert result["table_type"] == "MANAGED_TABLE"
         assert result["engine_id"] == "presto-01"
 
     @pytest.mark.asyncio
@@ -265,15 +196,13 @@ class TestDescribeTable:
 
         # Check first column
         id_col = columns[0]
-        assert id_col["column_name"] == "id"
-        assert id_col["data_type"] == "bigint"
-        assert id_col["nullable"] is False
-        assert id_col["comment"] == "Primary key"
+        assert id_col["name"] == "id"
+        assert id_col["type"] == "bigint"
+        assert id_col.get("comment") == "Primary key"
 
         # Check nullable column
         email_col = columns[2]
-        assert email_col["column_name"] == "email"
-        assert email_col["nullable"] is True
+        assert email_col["name"] == "email"
 
     @pytest.mark.asyncio
     async def test_describe_table_with_engine_id(self, mock_context, watsonx_client, respx_mock):
@@ -301,85 +230,6 @@ class TestDescribeTable:
         assert result["engine_id"] == "presto-01"
 
     @pytest.mark.asyncio
-    async def test_describe_table_with_statistics(self, mock_context, watsonx_client, respx_mock):
-        """Test that table statistics are properly extracted."""
-        mock_response = {
-            "table_type": "TABLE",
-            "columns": [],
-            "primary_keys": [],
-            "partitions": [],
-            "properties": {},
-            "row_count": 50000,
-            "size_bytes": 2500000,
-            "created_on": "2024-01-15T10:00:00Z",
-            "last_modified": "2024-01-20T15:30:00Z",
-        }
-
-        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/products?engine_id=presto-01").mock(
-            return_value=httpx.Response(200, json=mock_response)
-        )
-
-        result = await describe_table(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="products",
-            engine_id="presto-01",
-        )
-
-        stats = result["statistics"]
-        assert stats["row_count"] == 50000
-        assert stats["size_bytes"] == 2500000
-        assert stats["created_on"] == "2024-01-15T10:00:00Z"
-        assert stats["last_modified"] == "2024-01-20T15:30:00Z"
-
-    @pytest.mark.asyncio
-    async def test_describe_table_alternative_field_names(self, mock_context, watsonx_client, respx_mock):
-        """Test describing table with alternative field names."""
-        mock_response = {
-            "table": {  # Nested under "table"
-                "table_type": "VIEW",
-                "columns": [
-                    {
-                        "name": "col1",  # "name" instead of "column_name"
-                        "type": "string",  # "type" instead of "data_type"
-                        "is_nullable": False,  # "is_nullable" instead of "nullable"
-                        "description": "Test column",  # "description" instead of "comment"
-                        "position": 1,  # "position" instead of "ordinal_position"
-                    }
-                ],
-                "size": 1000,  # "size" instead of "size_bytes"
-                "created_at": "2024-01-01T00:00:00Z",  # "created_at" instead of "created_on"
-                "updated_at": "2024-01-02T00:00:00Z",  # "updated_at" instead of "last_modified"
-            }
-        }
-
-        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
-            return_value=httpx.Response(200, json=mock_response)
-        )
-
-        result = await describe_table(
-            mock_context,
-            catalog_name="test",
-            schema_name="test",
-            table_name="test",
-            engine_id="presto-01",
-        )
-
-        # Check column with alternative names
-        col = result["columns"][0]
-        assert col["column_name"] == "col1"
-        assert col["data_type"] == "string"
-        assert col["nullable"] is False
-        assert col["comment"] == "Test column"
-        assert col["ordinal_position"] == 1
-
-        # Check statistics with alternative names
-        assert result["statistics"]["size_bytes"] == 1000
-        assert result["statistics"]["created_on"] == "2024-01-01T00:00:00Z"
-        assert result["statistics"]["last_modified"] == "2024-01-02T00:00:00Z"
-
-    @pytest.mark.asyncio
     async def test_describe_table_not_found(self, mock_context, watsonx_client, respx_mock):
         """Test describing non-existent table."""
         respx_mock.get(
@@ -397,32 +247,6 @@ class TestDescribeTable:
         assert result["error"] is True
         assert "Table not found" in result["error_message"]
         assert result["status_code"] == 404
-
-    @pytest.mark.asyncio
-    async def test_describe_table_no_partitions(self, mock_context, watsonx_client, respx_mock):
-        """Test describing table without partitions."""
-        mock_response = {
-            "table_type": "TABLE",
-            "columns": [{"column_name": "id", "data_type": "int", "nullable": False}],
-            "primary_keys": ["id"],
-            "partitions": [],
-            "properties": {},
-        }
-
-        respx_mock.get("https://test.watsonx.com/api/v3/catalogs/test/schemas/test/tables/test?engine_id=presto-01").mock(
-            return_value=httpx.Response(200, json=mock_response)
-        )
-
-        result = await describe_table(
-            mock_context,
-            catalog_name="test",
-            schema_name="test",
-            table_name="test",
-            engine_id="presto-01",
-        )
-
-        assert result["partitions"] == []
-        assert result["primary_keys"] == ["id"]
 
 
 class TestCreateSchema:

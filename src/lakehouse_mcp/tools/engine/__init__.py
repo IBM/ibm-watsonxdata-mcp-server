@@ -15,6 +15,7 @@ from lakehouse_mcp.tools.engine.restart_presto_engine import restart_presto_engi
 from lakehouse_mcp.tools.engine.resume_presto_engine import resume_presto_engine
 from lakehouse_mcp.tools.engine.resume_spark_engine import resume_spark_engine
 from lakehouse_mcp.tools.engine.scale_presto_engine import scale_presto_engine
+from lakehouse_mcp.tools.engine.scale_spark_engine import scale_spark_engine
 from lakehouse_mcp.tools.engine.update_presto_engine import update_presto_engine
 from lakehouse_mcp.tools.engine.update_spark_engine import update_spark_engine
 
@@ -28,6 +29,7 @@ __all__ = [
     "resume_presto_engine",
     "resume_spark_engine",
     "scale_presto_engine",
+    "scale_spark_engine",
     "update_presto_engine",
     "update_spark_engine",
 ]

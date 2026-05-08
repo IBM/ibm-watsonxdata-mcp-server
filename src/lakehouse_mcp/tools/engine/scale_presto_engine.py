@@ -27,22 +27,22 @@ async def scale_presto_engine(
 ) -> dict[str, Any]:
     """Scale a Presto engine by adjusting coordinator and worker node counts in watsonx.data.
 
-    VALID NODE TYPES: Only "starter" and "cache_optimized" are valid.
-
+    RECOMMENDED NODE TYPES: "starter" or "cache_optimized" (other types may be available)
+    
     SCALING CAPABILITIES:
     - Coordinator quantity: Always 1 (cannot be changed)
-    - Worker quantity: 1-18 nodes
+    - Worker quantity: 1-18 (recommended), up to 50 may be supported
     - Node types CAN be changed during scaling (e.g., from "starter" to "cache_optimized")
     - Coordinator and worker do NOT need to match node types
-
+    
     API REQUIREMENT: Must provide BOTH coordinator AND worker configurations together.
 
     Args:
         engine_id: Engine identifier
-        coordinator_node_type: Must be "starter" or "cache_optimized". Can be different from current type.
+        coordinator_node_type: Typically "starter" or "cache_optimized". Can be different from current type.
         coordinator_quantity: Number of coordinator nodes (must be 1 for Presto)
-        worker_node_type: Must be "starter" or "cache_optimized". Can be different from coordinator_node_type.
-        worker_quantity: Number of worker nodes (1-18). Can be changed during scaling.
+        worker_node_type: Typically "starter" or "cache_optimized". Can be different from coordinator_node_type.
+        worker_quantity: Number of worker nodes (1-18 recommended, up to 50 may be supported)
 
     Returns:
         Dict with scaling operation status and new node configuration
@@ -57,27 +57,15 @@ async def scale_presto_engine(
             "status_code": 400,
         }
     
-    if worker_quantity < 1 or worker_quantity > 18:
+    if worker_quantity < 1 or worker_quantity > 1000:
         return {
             "error": True,
-            "error_message": f"worker_quantity must be between 1 and 18, got {worker_quantity}",
+            "error_message": f"worker_quantity must be between 1 and 1000 (1-18 recommended), got {worker_quantity}",
             "status_code": 400,
         }
 
-    # Validate node types
-    valid_node_types = ["starter", "cache_optimized"]
-    if coordinator_node_type not in valid_node_types:
-        return {
-            "error": True,
-            "error_message": f"coordinator_node_type must be one of {valid_node_types}, got '{coordinator_node_type}'",
-            "status_code": 400,
-        }
-    if worker_node_type not in valid_node_types:
-        return {
-            "error": True,
-            "error_message": f"worker_node_type must be one of {valid_node_types}, got '{worker_node_type}'",
-            "status_code": 400,
-        }
+    # Note: Node type validation removed - API accepts various node types depending on environment
+    # Common types: "starter", "cache_optimized", but others may be available
 
     # Build request body - API requires both coordinator and worker
     body: dict[str, Any] = {

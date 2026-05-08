@@ -27,6 +27,7 @@ from lakehouse_mcp.tools.engine import (
     resume_presto_engine,
     resume_spark_engine,
     scale_presto_engine,
+    scale_spark_engine,
     update_presto_engine,
     update_spark_engine,
 )
@@ -80,6 +81,7 @@ __all__ = [
     "resume_presto_engine",
     "resume_spark_engine",
     "scale_presto_engine",
+    "scale_spark_engine",
     "stop_spark_application",
     "submit_spark_application",
     "update_presto_engine",

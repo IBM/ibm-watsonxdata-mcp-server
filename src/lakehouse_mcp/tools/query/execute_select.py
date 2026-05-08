@@ -34,7 +34,7 @@ async def execute_select(
         catalog_name: Target catalog (e.g., "iceberg_data", "tpch")
         schema_name: Default schema for unqualified table names
         engine_id: Engine to run query on (from list_engines, must be running)
-        limit: Max rows to return (default: 500 if no LIMIT in query)
+        limit: Max rows to return (default: 500 if no LIMIT in query). Note: Using high limits will consume more tokens.
 
     Returns:
         Dict with:
@@ -146,8 +146,8 @@ async def execute_select(
 
         if current_columns and not result_columns:
             result_columns = current_columns
-        if current_rows and not result_rows:
-            result_rows = current_rows
+        if current_rows:
+            result_rows.extend(current_rows)
 
         # Check if query is finished
         # Some responses may not have state but have columns/data, indicating completion

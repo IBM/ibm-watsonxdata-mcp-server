@@ -30,7 +30,7 @@ async def explain_query(
 
     Args:
         engine_id: Presto or Prestissimo engine identifier
-        statement: SQL query to explain
+        statement: SQL query to explain. If query fails, consider using fully qualified table names (catalog.schema.table)
         engine_type: Engine type - "presto" or "prestissimo" (default: "presto")
         format: Output format - "json" or "text"
         type: Explain type - "logical", "distributed", "validate", or "io"
@@ -42,7 +42,11 @@ async def explain_query(
 
     # Validate engine type
     if engine_type not in ["presto", "prestissimo"]:
-        raise ValueError(f"Invalid engine_type: {engine_type}. Must be 'presto' or 'prestissimo'")
+        return {
+            "error": True,
+            "error_message": f"Invalid engine_type: {engine_type}. Must be 'presto' or 'prestissimo'",
+            "status_code": 400,
+        }
 
     logger.info(
         "explaining_query",
