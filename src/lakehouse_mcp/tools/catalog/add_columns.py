@@ -27,11 +27,14 @@ async def add_columns(
 ) -> dict[str, Any]:
     """Add one or more columns to a table in a watsonx.data schema.
 
+    Note: Data types are typically specified in lowercase (e.g., "varchar", "int", "decimal").
+    While the API pattern allows both cases, lowercase is recommended for compatibility.
+
     Args:
         catalog_name: Catalog containing the table (e.g., "iceberg_data")
         schema_name: Schema containing the table
         table_name: Table to add columns to
-        columns: List of column definitions, each with: name (required), type (required),
+        columns: List of column definitions, each with: name (required), type (required, lowercase recommended),
                  comment (optional), extra (optional), precision (optional), scale (optional)
         engine_id: Engine ID to use for the operation (from list_engines)
 
