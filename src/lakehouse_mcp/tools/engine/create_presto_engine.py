@@ -59,6 +59,20 @@ async def create_presto_engine(
     
     NOTE: Node types CAN be changed later during scaling operations.
 
+    AUTOSCALING (OPTIONAL):
+    Presto engines support autoscaling to automatically adjust worker nodes based on resource utilization.
+    To enable autoscaling, include these fields in the configuration:
+    - autoscaling_enabled: true (boolean)
+    - autoscaling_config: {
+        "type": "cpu" or "memory" (required),
+        "target": 1-100 (target utilization percentage, e.g., 40),
+        "min_worker_quantity": 1-18 (minimum workers),
+        "max_worker_quantity": 1-18 (maximum workers),
+        "query_termination_grace_period_min": 1-120 (grace period before terminating queries),
+        "scale_in_stabilization_window_min": 5-60 (stabilization window for scale-in),
+        "scaling_step_size": 1-18 (nodes to add/remove per scaling action)
+      }
+
     Args:
         origin: Engine origin - must be "native" for v3 API
         display_name: Display name for the engine
@@ -66,11 +80,13 @@ async def create_presto_engine(
             - size_config: "custom" (recommended) or predefined options (may be supported)
             - coordinator: {"node_type": typically "starter" or "cache_optimized", "quantity": 1}
             - worker: {"node_type": typically "starter" or "cache_optimized", "quantity": 1-18 recommended}
+            - autoscaling_enabled: (optional) boolean to enable autoscaling
+            - autoscaling_config: (optional) autoscaling configuration object (see AUTOSCALING section)
         associated_catalogs: List of catalog names to associate
         description: Engine description
         engine_id: Optional custom engine ID (must match pattern: presto-0 through presto-1000)
         tags: Tags for the engine
-
+    
     Returns:
         Dict with created engine details including engine_id
     """
@@ -129,6 +145,99 @@ async def create_presto_engine(
 
     # Note: Node type validation removed - API accepts various node types depending on environment
     # Common types: "starter", "cache_optimized", but others may be available
+
+    # Validate autoscaling configuration if provided
+    autoscaling_enabled = configuration.get("autoscaling_enabled")
+    autoscaling_config = configuration.get("autoscaling_config")
+    
+    if autoscaling_enabled is not None and not isinstance(autoscaling_enabled, bool):
+        return {
+            "error": True,
+            "error_message": "autoscaling_enabled must be a boolean",
+            "status_code": 400,
+        }
+    
+    if autoscaling_config is not None:
+        # Validate autoscaling_config structure
+        if not isinstance(autoscaling_config, dict):
+            return {
+                "error": True,
+                "error_message": "autoscaling_config must be a dictionary",
+                "status_code": 400,
+            }
+        
+        # Validate required field: type
+        if "type" not in autoscaling_config:
+            return {
+                "error": True,
+                "error_message": "autoscaling_config must include 'type' field",
+                "status_code": 400,
+            }
+        
+        config_type = autoscaling_config.get("type")
+        if config_type not in ["cpu", "memory"]:
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config type must be 'cpu' or 'memory', got '{config_type}'",
+                "status_code": 400,
+            }
+        
+        # Validate optional fields with their constraints
+        target = autoscaling_config.get("target")
+        if target is not None and (not isinstance(target, int) or target < 1 or target > 100):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config target must be an integer between 1 and 100, got {target}",
+                "status_code": 400,
+            }
+        
+        min_workers = autoscaling_config.get("min_worker_quantity")
+        if min_workers is not None and (not isinstance(min_workers, int) or min_workers < 1 or min_workers > 18):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config min_worker_quantity must be an integer between 1 and 18, got {min_workers}",
+                "status_code": 400,
+            }
+        
+        max_workers = autoscaling_config.get("max_worker_quantity")
+        if max_workers is not None and (not isinstance(max_workers, int) or max_workers < 1 or max_workers > 18):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config max_worker_quantity must be an integer between 1 and 18, got {max_workers}",
+                "status_code": 400,
+            }
+        
+        # Validate min <= max if both are provided
+        if min_workers is not None and max_workers is not None and min_workers > max_workers:
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config min_worker_quantity ({min_workers}) cannot be greater than max_worker_quantity ({max_workers})",
+                "status_code": 400,
+            }
+        
+        grace_period = autoscaling_config.get("query_termination_grace_period_min")
+        if grace_period is not None and (not isinstance(grace_period, int) or grace_period < 1 or grace_period > 120):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config query_termination_grace_period_min must be an integer between 1 and 120, got {grace_period}",
+                "status_code": 400,
+            }
+        
+        stabilization = autoscaling_config.get("scale_in_stabilization_window_min")
+        if stabilization is not None and (not isinstance(stabilization, int) or stabilization < 5 or stabilization > 60):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config scale_in_stabilization_window_min must be an integer between 5 and 60, got {stabilization}",
+                "status_code": 400,
+            }
+        
+        step_size = autoscaling_config.get("scaling_step_size")
+        if step_size is not None and (not isinstance(step_size, int) or step_size < 1 or step_size > 18):
+            return {
+                "error": True,
+                "error_message": f"autoscaling_config scaling_step_size must be an integer between 1 and 18, got {step_size}",
+                "status_code": 400,
+            }
 
     # Build request body according to API v3 schema
     body: dict[str, Any] = {
