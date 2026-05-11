@@ -514,6 +514,135 @@ class TestCreatePrestoEngine:
 
         assert result["engine_id"] == "presto-starter"
 
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_with_autoscaling(self, mock_context, watsonx_client, respx_mock):
+        """Test creating a Presto engine with autoscaling enabled."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        create_response = {
+            "engine_id": "presto-autoscale",
+            "origin": "native",
+            "display_name": "Autoscaling Engine",
+            "configuration": {
+                "autoscaling_enabled": True,
+                "autoscaling_config": {
+                    "type": "cpu",
+                    "target": 40,
+                    "min_worker_quantity": 1,
+                    "max_worker_quantity": 10
+                }
+            }
+        }
+        respx_mock.post("https://test.watsonx.com/api/v3/presto_engines").mock(
+            return_value=httpx.Response(201, json=create_response)
+        )
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "starter", "quantity": 2},
+            "autoscaling_enabled": True,
+            "autoscaling_config": {
+                "type": "cpu",
+                "target": 40,
+                "min_worker_quantity": 1,
+                "max_worker_quantity": 10,
+                "query_termination_grace_period_min": 5,
+                "scale_in_stabilization_window_min": 10,
+                "scaling_step_size": 2
+            }
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="Autoscaling Engine",
+            configuration=configuration
+        )
+
+        assert result["engine_id"] == "presto-autoscale"
+        assert result["configuration"]["autoscaling_enabled"] is True
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_autoscaling_invalid_type(self, mock_context, watsonx_client):
+        """Test that invalid autoscaling type is rejected."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "starter", "quantity": 2},
+            "autoscaling_enabled": True,
+            "autoscaling_config": {
+                "type": "invalid",
+                "target": 40
+            }
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="Invalid Autoscaling",
+            configuration=configuration
+        )
+
+        assert result["error"] is True
+        assert "type must be 'cpu' or 'memory'" in result["error_message"]
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_autoscaling_invalid_target(self, mock_context, watsonx_client):
+        """Test that invalid autoscaling target is rejected."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "starter", "quantity": 2},
+            "autoscaling_enabled": True,
+            "autoscaling_config": {
+                "type": "cpu",
+                "target": 150  # Invalid: must be 1-100
+            }
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="Invalid Target",
+            configuration=configuration
+        )
+
+        assert result["error"] is True
+        assert "target must be an integer between 1 and 100" in result["error_message"]
+
+    @pytest.mark.asyncio
+    async def test_create_presto_engine_autoscaling_min_greater_than_max(self, mock_context, watsonx_client):
+        """Test that min_worker_quantity > max_worker_quantity is rejected."""
+        from lakehouse_mcp.tools.engine.create_presto_engine import create_presto_engine
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "starter", "quantity": 2},
+            "autoscaling_enabled": True,
+            "autoscaling_config": {
+                "type": "cpu",
+                "target": 40,
+                "min_worker_quantity": 10,
+                "max_worker_quantity": 5
+            }
+        }
+
+        result = await create_presto_engine(
+            mock_context,
+            origin="native",
+            display_name="Invalid Min/Max",
+            configuration=configuration
+        )
+
+        assert result["error"] is True
+        assert "min_worker_quantity" in result["error_message"]
+        assert "cannot be greater than max_worker_quantity" in result["error_message"]
 
 class TestScalePrestoEngine:
     """Tests for scale_presto_engine tool."""
