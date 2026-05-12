@@ -29,10 +29,63 @@ async def create_presto_engine(
 ) -> dict[str, Any]:
     """Create a new Presto engine in watsonx.data.
 
-    RECOMMENDED CONFIGURATION:
-    - size_config: "custom" (most reliable across regions/environments)
-    - node_type: "starter" or "cache_optimized" (other types may be available)
-    - Worker quantity: 1-18 (recommended range, higher values up to 50 may be supported)
+    EXAMPLE PAYLOAD (Complete working example with autoscaling):
+    {
+        "origin": "native",
+        "display_name": "My-Presto-Engine",
+        "description": "Presto engine with autoscaling",
+        "tags": [],
+        "associated_catalogs": [],
+        "configuration": {
+            "size_config": "custom",
+            "coordinator": {
+                "node_type": "starter",
+                "quantity": 1
+            },
+            "worker": {
+                "node_type": "starter",
+                "quantity": 1
+            },
+            "autoscaling_enabled": true,
+            "autoscaling_config": {
+                "type": "cpu",
+                "target": 40,
+                "min_worker_quantity": 1,
+                "max_worker_quantity": 18,
+                "query_termination_grace_period_min": 1,
+                "scale_in_stabilization_window_min": 5,
+                "scaling_step_size": 1
+            }
+        }
+    }
+
+    Args:
+        origin: (required) Engine origin - must be "native" for v3 API
+        display_name: (required) Display name for the engine
+        configuration: (required) Engine configuration with required fields:
+            - size_config: (required) "custom" (recommended) or predefined options (may be supported)
+            - coordinator: (required) {"node_type": typically "starter" or "cache_optimized", "quantity": 1}
+            - worker: (required) {"node_type": typically "starter" or "cache_optimized", "quantity": 1-18 recommended}
+            - autoscaling_enabled: (optional) boolean to enable autoscaling
+            - autoscaling_config: (required if autoscaling_enabled is true) autoscaling configuration object (see AUTOSCALING section)
+        associated_catalogs: (optional) List of catalog names to associate
+        description: (optional) Engine description
+        engine_id: (optional) Custom engine ID (must match pattern: presto-0 through presto-1000)
+        tags: (optional) Tags for the engine
+
+    AUTOSCALING (OPTIONAL):
+    Presto engines support autoscaling to automatically adjust worker nodes based on resource utilization.
+    To enable autoscaling, include these fields in the configuration:
+    - autoscaling_enabled: true (boolean)
+    - autoscaling_config: {
+        "type": "cpu" or "memory" (required),
+        "target": 1-100 (target utilization percentage, e.g., 40),
+        "min_worker_quantity": 1-18 (minimum workers),
+        "max_worker_quantity": 1-18 (maximum workers),
+        "query_termination_grace_period_min": 1-120 (grace period before terminating queries),
+        "scale_in_stabilization_window_min": 5-60 (stabilization window for scale-in),
+        "scaling_step_size": 1-18 (nodes to add/remove per scaling action)
+      }
     
     CUSTOM SIZE CONFIG (RECOMMENDED):
     - Coordinator: 1 node (always), node_type: "starter" or "cache_optimized"
@@ -58,34 +111,6 @@ async def create_presto_engine(
     (specific requirements vary)
     
     NOTE: Node types CAN be changed later during scaling operations.
-
-    AUTOSCALING (OPTIONAL):
-    Presto engines support autoscaling to automatically adjust worker nodes based on resource utilization.
-    To enable autoscaling, include these fields in the configuration:
-    - autoscaling_enabled: true (boolean)
-    - autoscaling_config: {
-        "type": "cpu" or "memory" (required),
-        "target": 1-100 (target utilization percentage, e.g., 40),
-        "min_worker_quantity": 1-18 (minimum workers),
-        "max_worker_quantity": 1-18 (maximum workers),
-        "query_termination_grace_period_min": 1-120 (grace period before terminating queries),
-        "scale_in_stabilization_window_min": 5-60 (stabilization window for scale-in),
-        "scaling_step_size": 1-18 (nodes to add/remove per scaling action)
-      }
-
-    Args:
-        origin: Engine origin - must be "native" for v3 API
-        display_name: Display name for the engine
-        configuration: Engine configuration with required fields:
-            - size_config: "custom" (recommended) or predefined options (may be supported)
-            - coordinator: {"node_type": typically "starter" or "cache_optimized", "quantity": 1}
-            - worker: {"node_type": typically "starter" or "cache_optimized", "quantity": 1-18 recommended}
-            - autoscaling_enabled: (optional) boolean to enable autoscaling
-            - autoscaling_config: (optional) autoscaling configuration object (see AUTOSCALING section)
-        associated_catalogs: List of catalog names to associate
-        description: Engine description
-        engine_id: Optional custom engine ID (must match pattern: presto-0 through presto-1000)
-        tags: Tags for the engine
     
     Returns:
         Dict with created engine details including engine_id
