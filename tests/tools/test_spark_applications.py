@@ -211,6 +211,112 @@ class TestListSparkApplications:
 
         assert len(result["applications"]) == 0
 
+    @pytest.mark.asyncio
+    async def test_list_applications_with_limit(
+        self,
+        mock_context,
+        watsonx_client,
+        respx_mock,
+    ):
+        """Test listing Spark applications with limit parameter."""
+        mock_response = {
+            "applications": [
+                {
+                    "application_id": "app-123",
+                    "name": "App 1",
+                    "state": "running",
+                    "start_time": "2024-01-01T00:00:00Z",
+                },
+                {
+                    "application_id": "app-456",
+                    "name": "App 2",
+                    "state": "running",
+                    "start_time": "2024-01-01T01:00:00Z",
+                },
+            ]
+        }
+
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines/spark-01/applications?limit=10").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await list_spark_applications(
+            mock_context,
+            engine_id="spark-01",
+            limit=10,
+        )
+
+        assert len(result["applications"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_list_applications_with_state_and_limit(
+        self,
+        mock_context,
+        watsonx_client,
+        respx_mock,
+    ):
+        """Test listing Spark applications with both state and limit parameters."""
+        mock_response = {
+            "applications": [
+                {
+                    "application_id": "app-123",
+                    "name": "Running App",
+                    "state": "running",
+                    "start_time": "2024-01-01T00:00:00Z",
+                },
+            ]
+        }
+
+        respx_mock.get("https://test.watsonx.com/api/v3/spark_engines/spark-01/applications?state=running&limit=5").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await list_spark_applications(
+            mock_context,
+            engine_id="spark-01",
+            state=["running"],
+            limit=5,
+        )
+
+        assert len(result["applications"]) == 1
+        assert result["applications"][0]["state"] == "running"
+
+    @pytest.mark.asyncio
+    async def test_list_applications_invalid_limit_too_low(
+        self,
+        mock_context,
+        watsonx_client,
+        respx_mock,
+    ):
+        """Test listing Spark applications with limit below valid range."""
+        result = await list_spark_applications(
+            mock_context,
+            engine_id="spark-01",
+            limit=0,
+        )
+
+        assert result["error"] is True
+        assert "limit must be between 1 and 1000" in result["error_message"]
+        assert result["status_code"] == 400
+
+    @pytest.mark.asyncio
+    async def test_list_applications_invalid_limit_too_high(
+        self,
+        mock_context,
+        watsonx_client,
+        respx_mock,
+    ):
+        """Test listing Spark applications with limit above valid range."""
+        result = await list_spark_applications(
+            mock_context,
+            engine_id="spark-01",
+            limit=1001,
+        )
+
+        assert result["error"] is True
+        assert "limit must be between 1 and 1000" in result["error_message"]
+        assert result["status_code"] == 400
+
 
 class TestGetSparkApplicationStatus:
     """Tests for get_spark_application_status tool."""
