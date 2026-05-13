@@ -29,7 +29,7 @@ async def create_presto_engine(
 ) -> dict[str, Any]:
     """Create a new Presto engine in watsonx.data.
 
-    EXAMPLE PAYLOAD (Complete working example with autoscaling):
+    EXAMPLE PAYLOAD:
     {
         "origin": "native",
         "display_name": "My-Presto-Engine",
@@ -60,7 +60,7 @@ async def create_presto_engine(
     }
 
     Args:
-        origin: (required) Engine origin - must be "native" for v3 API
+        origin: (required) "native"
         display_name: (required) Display name for the engine
         configuration: (required) Engine configuration with required fields:
             - size_config: (required) "custom" (recommended) or predefined options (may be supported)
@@ -69,16 +69,15 @@ async def create_presto_engine(
             - autoscaling_enabled: (optional) boolean to enable autoscaling
             - autoscaling_config: (required if autoscaling_enabled is true) autoscaling configuration object (see AUTOSCALING section)
         associated_catalogs: (optional) List of catalog names to associate
-        description: (optional) Engine description
+        description: (optional) Engine description 50 characters max
         engine_id: (optional) Custom engine ID (must match pattern: presto-0 through presto-1000)
         tags: (optional) Tags for the engine
 
     AUTOSCALING (OPTIONAL):
-    Presto engines support autoscaling to automatically adjust worker nodes based on resource utilization.
     To enable autoscaling, include these fields in the configuration:
     - autoscaling_enabled: true (boolean)
     - autoscaling_config: {
-        "type": "cpu" or "memory" (required),
+        "type": "cpu" or "memory",
         "target": 1-100 (target utilization percentage, e.g., 40),
         "min_worker_quantity": 1-18 (minimum workers),
         "max_worker_quantity": 1-18 (maximum workers),
@@ -87,30 +86,12 @@ async def create_presto_engine(
         "scaling_step_size": 1-18 (nodes to add/remove per scaling action)
       }
     
-    CUSTOM SIZE CONFIG (RECOMMENDED):
-    - Coordinator: 1 node (always), node_type: "starter" or "cache_optimized"
-    - Worker: 1-18 nodes (recommended), node_type: "starter" or "cache_optimized"
-    - Node types do NOT need to match (e.g., starter coordinator + cache_optimized worker is allowed)
-    
-    PREDEFINED SIZE CONFIGS (may be supported, availability varies by region/environment):
+    PREDEFINED SIZE CONFIGS:
     If using predefined configs, exact node types and quantities must match:
     - starter: 1 coordinator + 1 worker (both bx2.48x192)
     - small: 1 coordinator + 3 workers (both ox2.16x128)
     - medium: 1 coordinator + 6 workers (both ox2.16x128)
     - large: 1 coordinator + 12 workers (both ox2.16x128)
-
-    If the above doesn't work, this predefined size config may works
-    PREDEFINED SIZE CONFIGS (may be supported, availability varies by region/environment):
-    If using predefined configs, exact node types and quantities must match:
-    - starter: 1 coordinator + 1 worker (both "starter" node_type)
-    - small: 1 coordinator + 3 workers (both "cache_optimized" node_type)
-    - medium: 1 coordinator + 6 workers (both "cache_optimized" node_type)
-    - large: 1 coordinator + 12 workers (both "cache_optimized" node_type)
-    
-    Other predefined options may be available: cache_optimized, compute_optimized, lite, xlarge, xxlarge
-    (specific requirements vary)
-    
-    NOTE: Node types CAN be changed later during scaling operations.
     
     Returns:
         Dict with created engine details including engine_id
