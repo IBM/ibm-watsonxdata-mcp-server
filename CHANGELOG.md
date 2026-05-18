@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-18
+
+### Added
+- Prestissimo engine management tools:
+  - `create_prestissimo_engine` - Create new Prestissimo engines in watsonx.data
+  - `update_prestissimo_engine` - Update Prestissimo engine configuration and settings
+  - `restart_prestissimo_engine` - Restart Prestissimo engines
+  - `pause_prestissimo_engine` - Pause running Prestissimo engines
+  - `resume_prestissimo_engine` - Resume paused Prestissimo engines
+  - `scale_prestissimo_engine` - Scale Prestissimo engines by adjusting worker node counts
+- Streamable HTTP transport support for remote deployments
+- Remote MCP server documentation reference in README
+- Limit parameter support for `list_spark_applications` tool (1-1000 range)
+
+### Changed
+- Updated TOOLS.md with comprehensive Prestissimo engine tool documentation
+- Enhanced README with streamable HTTP transport usage examples
+- Improved error handling in query tools (`execute_insert`, `execute_update`, `explain_query`, `explain_analyze_query`)
+  - Changed from raising exceptions to returning error dictionaries
+  - Added proper status code reporting (400 for validation errors)
+- Enhanced test coverage for query validation and Spark application listing
+
+### Fixed
+- Query validation error handling now returns structured error responses instead of raising exceptions
+- Improved error messages for invalid engine types in explain tools
+- Fixed multiple statement detection in INSERT and UPDATE queries
+- Added validation for limit parameter in `list_spark_applications` (must be between 1 and 1000)
+
 ## [0.1.3] - 2026-04-13
 
 ### Changed
