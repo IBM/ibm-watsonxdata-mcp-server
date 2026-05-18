@@ -9,13 +9,19 @@ Complete reference for all watsonx.data MCP tools.
 - [Engine Tools](#engine-tools)
   - [list_engines](#list_engines)
   - [create_presto_engine](#create_presto_engine)
+  - [create_prestissimo_engine](#create_prestissimo_engine)
   - [create_spark_engine](#create_spark_engine)
   - [update_presto_engine](#update_presto_engine)
+  - [update_prestissimo_engine](#update_prestissimo_engine)
   - [update_spark_engine](#update_spark_engine)
   - [restart_presto_engine](#restart_presto_engine)
+  - [restart_prestissimo_engine](#restart_prestissimo_engine)
   - [pause_presto_engine](#pause_presto_engine)
+  - [pause_prestissimo_engine](#pause_prestissimo_engine)
   - [resume_presto_engine](#resume_presto_engine)
+  - [resume_prestissimo_engine](#resume_prestissimo_engine)
   - [scale_presto_engine](#scale_presto_engine)
+  - [scale_prestissimo_engine](#scale_prestissimo_engine)
   - [pause_spark_engine](#pause_spark_engine)
   - [resume_spark_engine](#resume_spark_engine)
 - [Catalog Tools](#catalog-tools)
@@ -103,20 +109,20 @@ This instance is healthy and ready for queries.
 
 ### list_engines
 
-List all available Presto and Spark engines with their status, configuration, and capabilities.
+List all available Presto, Prestissimo, and Spark engines with their status, configuration, and capabilities.
 
 **Category**: Engine Management
 
 **Parameters**:
 - `engine_type` (string, optional): Filter by engine type
-  - Values: `"presto"`, `"spark"`, or omit for all
-  - Default: Returns both engine types
+  - Values: `"presto"`, `"prestissimo"`, `"spark"`, or omit for all
+  - Default: Returns all engine types
 
 **Returns**:
 - `engines` (array): List of engine objects
   - `engine_id` (string): Unique engine identifier
   - `name` (string): Human-readable engine name
-  - `type` (string): "presto" or "spark"
+  - `type` (string): "presto", "prestissimo", or "spark"
   - `status` (string): "running", "stopped", "starting", etc.
   - `config` (object): Engine configuration details
   - `created_at` (string): Creation timestamp
@@ -145,8 +151,15 @@ Presto Engines (2):
    - Nodes: 5
    - Coordinator: presto-analytics-coordinator.ibm.com:8080
 
+Prestissimo Engines (1):
+3. prestissimo-01
+   - Status: running
+   - Version: 0.285
+   - Nodes: 4
+   - Coordinator: prestissimo-01-coordinator.ibm.com:8080
+
 Spark Engines (1):
-3. spark-serverless
+4. spark-serverless
    - Status: running
    - Version: 3.3.2
    - Mode: serverless
@@ -165,20 +178,8 @@ List only Presto engines
 Presto Engines (2):
 
 1. presto-01 (running)
-   - 3 worker nodes
-   - Optimized for interactive queries
 
-2. presto-analytics (running)
-   - 5 worker nodes
-   - Optimized for analytical workloads
-```
-
-**Use Cases:**
-- Find available engines before querying
-- Check engine status and availability
-- Select appropriate engine for workload
-- Monitor engine health
-
+---
 
 ### create_presto_engine
 
@@ -220,6 +221,51 @@ Create a new Presto engine named "analytics-presto" with custom configuration fo
 - Provision new query engines
 - Set up dedicated engines for specific workloads
 - Create development/testing engines
+### create_prestissimo_engine
+
+Create a new Prestissimo engine in watsonx.data.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `origin` (string, required): Engine origin - "native", "external", or "discover"
+- `display_name` (string, required): Display name for the engine
+- `configuration` (object, required): Engine configuration with required fields:
+  - `size_config`: "custom" (flexible workers 1-25) OR "starter"/"small"/"medium"/"large" (fixed: 1/3/6/12)
+  - `coordinator`: Coordinator node config with:
+    - `node_type`: Must be "starter", "small", "medium", or "large" (MUST match worker node_type)
+    - `quantity`: Number of coordinator nodes (must be 1)
+  - `worker`: Worker node config with:
+    - `node_type`: Must be "starter", "small", "medium", or "large" (MUST match coordinator node_type)
+    - `quantity`: Number of worker nodes (1-25 for custom, fixed for predefined)
+- `associated_catalogs` (array, optional): List of catalog names to associate
+- `description` (string, optional): Engine description
+- `engine_id` (string, optional): Optional custom engine ID
+- `tags` (array, optional): Tags for the engine
+
+**Returns**:
+- `engine_id` (string): Created engine identifier
+- Full engine configuration
+
+**Important Notes:**
+- **node_type is PERMANENT**: Cannot be changed after engine creation
+- **Coordinator and worker must match**: Both must use the same node_type
+- **Use size_config "custom"**: For flexible worker counts (1-25)
+- **Prestissimo vs Presto**: Prestissimo is a C++ rewrite of Presto offering better performance
+
+**Example Usage:**
+```
+Create a new Prestissimo engine named "analytics-prestissimo" with custom configuration for the iceberg_data catalog
+```
+
+**Use Cases:**
+- Provision high-performance query engines
+- Set up dedicated engines for latency-sensitive workloads
+- Create development/testing engines with better performance
+- Migrate from Presto to Prestissimo for improved query execution
+
+---
+
 
 ---
 
@@ -293,6 +339,37 @@ Restart a Presto engine to apply configuration changes or recover from issues.
 **Parameters**:
 - `engine_id` (string, required): Presto engine identifier
 
+### restart_prestissimo_engine
+
+Restart a Prestissimo engine to apply configuration changes or recover from issues.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Prestissimo engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `engine_type` (string): "prestissimo"
+- `status` (string): "restarting"
+- `message` (string): Operation status message
+- `response` (object): API response details
+
+**Example Usage:**
+```
+Restart prestissimo-01 engine to apply new configuration
+```
+
+**Use Cases:**
+- Apply configuration changes that require restart
+- Recover from engine issues or hung queries
+- Force refresh of engine state
+- Clear cached metadata
+
+**Important**: Engine will be unavailable during restart. Active queries will be terminated.
+
+---
+
 **Returns**:
 - `engine_id` (string): Engine identifier
 - `engine_type` (string): "presto"
@@ -321,6 +398,35 @@ Pause a running Presto engine to save resources while preserving configuration.
 
 **Category**: Engine Lifecycle Management
 
+### pause_prestissimo_engine
+
+Pause a running Prestissimo engine to save resources while preserving configuration.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Prestissimo engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `message` (string): Operation status message
+- `message_code` (string): Status code
+
+**Example Usage:**
+```
+Pause prestissimo-dev during off-hours to save costs
+```
+
+**Use Cases:**
+- Stop engines during off-hours to reduce costs
+- Temporarily disable engines for maintenance
+- Preserve engine configuration without deletion
+- Free up resources for other workloads
+
+**Important**: Paused engines retain their configuration and can be resumed quickly. Active queries will be terminated.
+
+---
+
 **Parameters**:
 - `engine_id` (string, required): Presto engine identifier
 
@@ -341,6 +447,35 @@ Pause presto-dev during off-hours to save costs
 - Free up resources for other workloads
 
 **Important**: Paused engines retain their configuration and can be resumed quickly. Active queries will be terminated.
+
+---
+
+### resume_prestissimo_engine
+
+Resume a paused Prestissimo engine to restore query processing capability.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Prestissimo engine identifier
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `message` (string): Operation status message
+- `message_code` (string): Status code
+
+**Example Usage:**
+```
+Resume prestissimo-dev for morning workload
+```
+
+**Use Cases:**
+- Restore paused engines for active use
+- Resume engines after maintenance window
+- Bring engines back online after off-hours
+- Quick activation without reconfiguration
+
+**Important**: Engine will start with its previous configuration. May take a few minutes to become fully operational.
 
 ---
 
@@ -368,6 +503,44 @@ Resume presto-dev for morning workload
 - Resume engines after maintenance window
 - Bring engines back online after off-hours
 - Quick activation without reconfiguration
+### scale_prestissimo_engine
+
+Scale a Prestissimo engine by adjusting coordinator and worker node counts.
+
+**Category**: Engine Lifecycle Management
+
+**Parameters**:
+- `engine_id` (string, required): Prestissimo engine identifier
+- `coordinator_node_type` (string, required): Must be "starter", "small", "medium", or "large" (must match engine's current type)
+- `coordinator_quantity` (int, required): Number of coordinator nodes (must be 1 for Prestissimo)
+- `worker_node_type` (string, required): Must be "starter", "small", "medium", or "large" (must match coordinator_node_type)
+- `worker_quantity` (int, required): Number of worker nodes (1-25)
+
+**Returns**:
+- `engine_id` (string): Engine identifier
+- `coordinator` (object): Coordinator node configuration
+- `worker` (object): Worker node configuration
+- `message` (string): Operation status message
+
+**Important Limitations:**
+- **API requires BOTH coordinator AND worker configurations**: Cannot scale just one
+- **Cannot change node types**: node_type must match engine's current configuration
+- **Only worker quantity changes**: Typically the only value modified when scaling
+
+**Example Usage:**
+```
+Scale prestissimo-01 from 2 to 5 worker nodes (keeping starter node type)
+```
+
+**Use Cases:**
+- Scale up for heavy query workloads
+- Scale down during low-usage periods
+- Adjust resources based on demand
+
+**Note**: Scaling is a rolling update - engine remains available during the operation.
+
+---
+
 
 **Important**: Engine will start with its previous configuration. May take a few minutes to become fully operational.
 
@@ -400,6 +573,36 @@ Scale a Presto engine by adjusting coordinator and worker node counts.
 ```
 Scale presto-01 from 2 to 5 worker nodes (keeping starter node type)
 ```
+### update_prestissimo_engine
+
+Update Prestissimo engine configuration and optionally trigger a restart.
+
+**Category**: Engine Management
+
+**Parameters**:
+- `engine_id` (string, required): Engine identifier
+- `description` (string, optional): Updated description (1-50 characters)
+- `display_name` (string, optional): Updated display name
+- `properties` (object, optional): Engine configuration properties
+- `restart_type` (string, optional): Set to "force" to trigger restart after update
+- `remove_engine_properties` (object, optional): Properties to remove
+- `tags` (array, optional): Updated tags
+
+**Returns**:
+- Updated engine configuration
+
+**Example Usage:**
+```
+Update prestissimo-01 engine description to "Production analytics engine" and restart it
+```
+
+**Use Cases:**
+- Modify engine settings
+- Apply configuration changes
+- Update resource allocation
+
+---
+
 
 **Use Cases:**
 - Scale up for heavy query workloads
