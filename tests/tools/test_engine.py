@@ -26,6 +26,9 @@ class TestListEngines:
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(200, json={"prestissimo_engines": []})
+        )
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
@@ -111,25 +114,63 @@ class TestListEngines:
         assert all(e["type"] == "spark" for e in result["engines"])
 
     @pytest.mark.asyncio
+    async def test_list_prestissimo_engines_only(
+        self,
+        mock_context,
+        watsonx_client,
+        respx_mock,
+    ):
+        """Test listing only Prestissimo engines."""
+        mock_prestissimo_response = {
+            "prestissimo_engines": [
+                {
+                    "id": "prestissimo-01",
+                    "display_name": "Prestissimo Engine 1",
+                    "status": "running",
+                    "size_config": "starter",
+                    "associated_catalogs": ["iceberg_data"],
+                }
+            ]
+        }
+        
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(200, json=mock_prestissimo_response)
+        )
+
+        result = await list_engines(mock_context, engine_type="prestissimo")
+
+        # Check summary statistics
+        assert result["summary"]["total_count"] == 1
+        assert result["summary"]["presto_count"] == 0
+        assert result["summary"]["prestissimo_count"] == 1
+        assert result["summary"]["spark_count"] == 0
+
+        # Check unified engine list
+        assert len(result["engines"]) == 1
+        assert all(e["type"] == "prestissimo" for e in result["engines"])
+
+    @pytest.mark.asyncio
     async def test_list_engines_invalid_type(self, mock_context):
         """Test listing engines with invalid engine type."""
         result = await list_engines(mock_context, engine_type="flink")
 
         assert result.get("error") is True
         assert "Invalid engine_type: flink" in result.get("error_message", "")
-        assert "Must be 'presto', 'spark', or None" in result.get("error_message", "")
+        assert "Must be 'presto', 'prestissimo', 'spark', or None" in result.get("error_message", "")
         assert result.get("status_code") == 400
 
     @pytest.mark.asyncio
     async def test_list_engines_empty_response(self, mock_context, watsonx_client, respx_mock):
         """Test listing engines when no engines exist."""
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(return_value=httpx.Response(200, json={"prestissimo_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines(mock_context)
 
         assert result["summary"]["total_count"] == 0
         assert result["summary"]["presto_count"] == 0
+        assert result["summary"]["prestissimo_count"] == 0
         assert result["summary"]["spark_count"] == 0
         assert result["engines"] == []
 
@@ -138,6 +179,9 @@ class TestListEngines:
         """Test listing engines when Presto API fails."""
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(500, json={"message": "Internal error"})
+        )
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(200, json={"prestissimo_engines": []})
         )
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
@@ -154,6 +198,9 @@ class TestListEngines:
         """Test listing engines when Spark API fails."""
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
+        )
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(200, json={"prestissimo_engines": []})
         )
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(500, json={"message": "Internal error"})
@@ -188,6 +235,7 @@ class TestListEngines:
         }
 
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(return_value=httpx.Response(200, json={"prestissimo_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines(mock_context)
@@ -201,6 +249,7 @@ class TestListEngines:
         response = {"spark_engines": [{"id": "spark-alt", "name": "Alternative Spark", "status": "running"}]}
 
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json={"presto_engines": []}))
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(return_value=httpx.Response(200, json={"prestissimo_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json=response))
 
         result = await list_engines(mock_context)
@@ -222,6 +271,7 @@ class TestListEngines:
         }
 
         respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(return_value=httpx.Response(200, json=response))
+        respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(return_value=httpx.Response(200, json={"prestissimo_engines": []}))
         respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(return_value=httpx.Response(200, json={"spark_engines": []}))
 
         result = await list_engines(mock_context)
@@ -242,6 +292,9 @@ class TestListEngines:
         presto_route = respx_mock.get("https://test.watsonx.com/api/v3/presto_engines").mock(
             return_value=httpx.Response(200, json=mock_presto_engines_response)
         )
+        prestissimo_route = respx_mock.get("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(200, json={"prestissimo_engines": []})
+        )
         spark_route = respx_mock.get("https://test.watsonx.com/api/v3/spark_engines").mock(
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
@@ -250,6 +303,7 @@ class TestListEngines:
 
         # All routes should be called
         assert presto_route.called
+        assert prestissimo_route.called
         assert spark_route.called
 
 
@@ -1039,3 +1093,169 @@ class TestScaleSparkEngine:
         assert result.get("error") is True
         assert "must be between 1 and 1000" in result.get("error_message", "")
         assert result.get("status_code") == 400
+
+
+class TestRestartPrestissimoEngine:
+    """Tests for restart_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_restart_prestissimo_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully restarting a Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.restart_prestissimo_engine import restart_prestissimo_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/restart").mock(
+            return_value=httpx.Response(200, json={"status": "restarting"})
+        )
+
+        result = await restart_prestissimo_engine(mock_context, engine_id="prestissimo-01")
+
+        assert result["engine_id"] == "prestissimo-01"
+        assert result["engine_type"] == "prestissimo"
+        assert result["status"] == "restarting"
+        assert "message" in result
+
+    @pytest.mark.asyncio
+    async def test_restart_prestissimo_engine_not_found(self, mock_context, watsonx_client, respx_mock):
+        """Test restarting non-existent Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.restart_prestissimo_engine import restart_prestissimo_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/invalid/restart").mock(
+            return_value=httpx.Response(404, json={"message": "Engine not found"})
+        )
+
+        result = await restart_prestissimo_engine(mock_context, engine_id="invalid")
+        
+        assert result["error"] is True
+        assert "Engine not found" in result["error_message"]
+        assert result["status_code"] == 404
+
+
+class TestPausePrestissimoEngine:
+    """Tests for pause_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_pause_prestissimo_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully pausing a Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.pause_prestissimo_engine import pause_prestissimo_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/pause").mock(
+            return_value=httpx.Response(200, json={"response": {"message": "Engine paused", "message_code": "success"}})
+        )
+
+        result = await pause_prestissimo_engine(mock_context, engine_id="prestissimo-01")
+
+        assert result["engine_id"] == "prestissimo-01"
+        assert result["message"] == "Engine paused"
+        assert result["message_code"] == "success"
+
+
+class TestResumePrestissimoEngine:
+    """Tests for resume_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_resume_prestissimo_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully resuming a Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.resume_prestissimo_engine import resume_prestissimo_engine
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/resume").mock(
+            return_value=httpx.Response(200, json={"message": "Engine resumed", "message_code": "success"})
+        )
+
+        result = await resume_prestissimo_engine(mock_context, engine_id="prestissimo-01")
+
+        assert result["engine_id"] == "prestissimo-01"
+        assert result["message"] == "Engine resumed"
+        assert result["message_code"] == "success"
+
+
+class TestScalePrestissimoEngine:
+    """Tests for scale_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_scale_prestissimo_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully scaling a Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.scale_prestissimo_engine import scale_prestissimo_engine
+
+        mock_response = {
+            "coordinator": {"node_type": "cache_optimized", "quantity": 1},
+            "worker": {"node_type": "cache_optimized", "quantity": 5},
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01/scale").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await scale_prestissimo_engine(
+            mock_context,
+            engine_id="prestissimo-01",
+            coordinator_node_type="cache_optimized",
+            coordinator_quantity=1,
+            worker_node_type="cache_optimized",
+            worker_quantity=5,
+        )
+
+        assert result["coordinator"]["node_type"] == "cache_optimized"
+        assert result["worker"]["quantity"] == 5
+
+
+class TestUpdatePrestissimoEngine:
+    """Tests for update_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_update_prestissimo_engine_description(self, mock_context, watsonx_client, respx_mock):
+        """Test updating Prestissimo engine description."""
+        from lakehouse_mcp.tools.engine.update_prestissimo_engine import update_prestissimo_engine
+
+        mock_response = {
+            "engine_id": "prestissimo-01",
+            "display_name": "Prestissimo Engine 1",
+            "description": "Updated description",
+        }
+
+        respx_mock.patch("https://test.watsonx.com/api/v3/prestissimo_engines/prestissimo-01").mock(
+            return_value=httpx.Response(200, json=mock_response)
+        )
+
+        result = await update_prestissimo_engine(
+            mock_context,
+            engine_id="prestissimo-01",
+            description="Updated description",
+        )
+
+        assert result["description"] == "Updated description"
+
+
+class TestCreatePrestissimoEngine:
+    """Tests for create_prestissimo_engine tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_prestissimo_engine_success(self, mock_context, watsonx_client, respx_mock):
+        """Test successfully creating a Prestissimo engine."""
+        from lakehouse_mcp.tools.engine.create_prestissimo_engine import create_prestissimo_engine
+
+        mock_response = {
+            "id": "prestissimo-new",
+            "display_name": "New Prestissimo Engine",
+            "origin": "native",
+            "status": "provisioning",
+        }
+
+        respx_mock.post("https://test.watsonx.com/api/v3/prestissimo_engines").mock(
+            return_value=httpx.Response(201, json=mock_response)
+        )
+
+        configuration = {
+            "size_config": "custom",
+            "coordinator": {"node_type": "starter", "quantity": 1},
+            "worker": {"node_type": "starter", "quantity": 3},
+        }
+
+        result = await create_prestissimo_engine(
+            mock_context,
+            origin="native",
+            display_name="New Prestissimo Engine",
+            configuration=configuration,
+        )
+
+        assert result["id"] == "prestissimo-new"
+        assert result["display_name"] == "New Prestissimo Engine"

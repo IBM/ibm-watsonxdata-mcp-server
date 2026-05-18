@@ -17,7 +17,7 @@ attrs==26.1.0
     #   cyclopts
     #   jsonschema
     #   referencing
-authlib==1.6.11
+authlib==1.7.2
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   fastmcp
@@ -42,6 +42,7 @@ cryptography==46.0.7
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   authlib
+    #   joserfc
     #   pyjwt
 cyclopts==4.10.1
     # via fastmcp
@@ -86,6 +87,8 @@ jaraco-context==6.1.2
     # via keyring
 jaraco-functools==4.4.0
     # via keyring
+joserfc==1.6.5
+    # via authlib
 jsonref==1.1.0
     # via fastmcp
 jsonschema==4.26.0
@@ -168,7 +171,7 @@ python-dotenv==1.2.2
     # via
     #   fastmcp
     #   pydantic-settings
-python-multipart==0.0.26
+python-multipart==0.0.29
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   mcp
@@ -221,8 +224,9 @@ typing-inspection==0.4.2
     #   pydantic-settings
 uncalled-for==0.2.0
     # via fastmcp
-urllib3==2.6.3
+urllib3==2.7.0
     # via
+    #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   ibm-cloud-sdk-core
     #   requests
 uvicorn==0.44.0
