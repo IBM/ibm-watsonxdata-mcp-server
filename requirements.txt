@@ -73,7 +73,7 @@ httpx-sse==0.4.3
     # via mcp
 ibm-cloud-sdk-core==3.24.4
     # via ibm-watsonxdata-mcp-server (pyproject.toml)
-idna==3.11
+idna==3.15
     # via
     #   anyio
     #   email-validator
