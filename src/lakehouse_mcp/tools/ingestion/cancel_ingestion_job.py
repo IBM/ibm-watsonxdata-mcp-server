@@ -37,7 +37,7 @@ async def cancel_ingestion_job(
         job_id=job_id,
     )
 
-    path = f"/v3/ingestion_jobs/{job_id}"
+    path = f"/v3/lhingestion/api/v1/ingestion/jobs/{job_id}"
     response = await watsonx_client.delete(path)
 
     # Check for API errors
@@ -54,4 +54,13 @@ async def cancel_ingestion_job(
         job_id=job_id,
     )
 
+    # If response is empty (204 No Content), return structured response
+    if not response or response == {}:
+        return {
+            "job_id": job_id,
+            "status": "cancelled",
+            "message": "Ingestion job successfully cancelled",
+        }
+
     return response
+    

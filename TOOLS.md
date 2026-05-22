@@ -2136,7 +2136,7 @@ Recommendation:
 
 ### cancel_ingestion_job
 
-Cancel a running or accepted ingestion job. This operation cancels ingestion jobs that are in progress.
+Cancel a running or accepted ingestion job. This operation stops ingestion jobs that are currently in progress.
 
 **Category**: Data Ingestion
 
@@ -2159,43 +2159,29 @@ Cancelling ingestion job...
 
 Job Cancelled: ingest-sales-2024-001
 - Status: cancelled
-- Rows processed before cancellation: 1,250,000
 - Partial data may have been written to target table
 
-The job has been stopped and removed from the queue.
-Note: Partial data that was already written to the target table
-will remain. You may need to clean up the target table if needed.
-```
-
-**Completed job deletion:**
-```
-Delete the completed job ingest-customers-123 from history
-```
-
-**Claude responds:**
-```
-Ingestion job deleted successfully.
-
-Job ingest-customers-123 has been removed from the job history.
-The ingested data in the target table remains unchanged.
+The job has been stopped. Note: Partial data that was already
+written to the target table will remain. You may need to clean
+up the target table if needed.
 ```
 
 **Use Cases:**
 - Cancel long-running jobs that are no longer needed
-- Clean up job history
 - Stop jobs consuming excessive resources
-- Remove failed job records
+- Halt jobs with errors
 
 **Best Practices:**
-- Verify job status before deletion
+- Verify job status before cancellation
 - Consider if partial results are needed
 - Document reason for cancellation
 - Check target table for partial data after cancellation
 
 **Safety Notes:**
-- Deletion is immediate and cannot be undone
-- Running jobs will be forcefully terminated
+- Cancellation is immediate and cannot be undone
+- Running jobs will be stopped
 - Partial data may remain in target table
+- Job will have status "stopped" after cancellation
 - Use with caution in production environments
 
 ---
