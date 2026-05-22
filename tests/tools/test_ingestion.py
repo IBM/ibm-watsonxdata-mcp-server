@@ -438,7 +438,7 @@ class TestCancelIngestionJob:
             "message": "Ingestion job cancelled successfully",
         }
 
-        respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-123").mock(
+        respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-123").mock(
             return_value=httpx.Response(200, json=mock_response)
         )
 
@@ -461,8 +461,8 @@ class TestCancelIngestionJob:
             "message": "Ingestion job cancelled and deleted",
         }
 
-        respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-running").mock(
-            return_value=httpx.Response(200, json=mock_response)
+        respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-running").mock(
+            return_value=httpx.Response(204, json=mock_response)
         )
 
         result = await cancel_ingestion_job(
@@ -480,7 +480,7 @@ class TestCancelIngestionJob:
         respx_mock,
     ):
         """Test cancelling a non-existent ingestion job."""
-        respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-nonexistent").mock(
+        respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-nonexistent").mock(
             return_value=httpx.Response(404, json={"message": "Ingestion job not found"})
         )
 
@@ -505,8 +505,8 @@ class TestCancelIngestionJob:
             "message": "Ingestion job cancelled successfully",
         }
 
-        respx_mock.delete("https://test.watsonx.com/api/v3/ingestion_jobs/job-completed").mock(
-            return_value=httpx.Response(200, json=mock_response)
+        respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-completed").mock(
+            return_value=httpx.Response(204, json=mock_response)
         )
 
         result = await cancel_ingestion_job(
