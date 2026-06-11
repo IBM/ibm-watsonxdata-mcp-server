@@ -224,6 +224,10 @@ class WatsonXClient:
             
             data = response.json()
 
+            # If response is exactly {}, return success response
+            if data == {}:
+                data = {"success": True}
+
             logger.info(
                 "watsonx_post_success",
                 url=url,
@@ -306,6 +310,10 @@ class WatsonXClient:
 
             data = response.json()
 
+            # If response is exactly {}, return success response
+            if data == {}:
+                data = {"success": True}
+
             logger.info(
                 "watsonx_patch_success",
                 url=url,
@@ -323,7 +331,8 @@ class WatsonXClient:
             path: API path (relative or absolute URL)
 
         Returns:
-            Response JSON as dictionary (may be empty for 204 responses)
+            Response JSON as dictionary. For empty responses ({}),
+            returns {"success": True}.
 
         Raises:
             httpx.HTTPStatusError: For HTTP error responses
@@ -381,11 +390,19 @@ class WatsonXClient:
                         "status_code": response.status_code,
                     }
 
-            # Handle 204 No Content responses
+            # Handle 204 No Content responses or empty JSON
             if response.status_code == 204:
                 data = {}
             else:
-                data = response.json()
+                try:
+                    data = response.json()
+                except ValueError:
+                    # Response has no content or invalid JSON
+                    data = {}
+
+            # If response is exactly {}, return success response
+            if data == {}:
+                data = {"success": True}
 
             logger.info(
                 "watsonx_delete_success",
