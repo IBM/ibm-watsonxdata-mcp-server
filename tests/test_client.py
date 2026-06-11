@@ -438,8 +438,8 @@ class TestWatsonXClient:
 
         result = await watsonx_client.delete("/v2/ingestion_jobs/job-789")
 
-        # Should return empty dict for 204 responses
-        assert result == {}
+        # Should return success response for 204 responses
+        assert result == {"success": True}
 
     @pytest.mark.asyncio
     async def test_delete_request_with_auth_headers(self, watsonx_client, respx_mock):

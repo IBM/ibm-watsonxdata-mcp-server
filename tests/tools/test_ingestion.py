@@ -457,12 +457,9 @@ class TestCancelIngestionJob:
         respx_mock,
     ):
         """Test cancelling a running ingestion job."""
-        mock_response = {
-            "message": "Ingestion job cancelled and deleted",
-        }
-
+        # 204 No Content response returns empty body, which becomes {"success": True}
         respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-running").mock(
-            return_value=httpx.Response(204, json=mock_response)
+            return_value=httpx.Response(204)
         )
 
         result = await cancel_ingestion_job(
@@ -470,7 +467,7 @@ class TestCancelIngestionJob:
             job_id="job-running",
         )
 
-        assert "message" in result
+        assert result["success"] is True
 
     @pytest.mark.asyncio
     async def test_cancel_nonexistent_job(
@@ -501,12 +498,9 @@ class TestCancelIngestionJob:
         respx_mock,
     ):
         """Test cancelling a completed ingestion job."""
-        mock_response = {
-            "message": "Ingestion job cancelled successfully",
-        }
-
+        # 204 No Content response returns empty body, which becomes {"success": True}
         respx_mock.delete("https://test.watsonx.com/api/v3/lhingestion/api/v1/ingestion/jobs/job-completed").mock(
-            return_value=httpx.Response(204, json=mock_response)
+            return_value=httpx.Response(204)
         )
 
         result = await cancel_ingestion_job(
@@ -514,4 +508,4 @@ class TestCancelIngestionJob:
             job_id="job-completed",
         )
 
-        assert "message" in result
+        assert result["success"] is True
