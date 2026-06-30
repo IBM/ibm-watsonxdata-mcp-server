@@ -247,11 +247,13 @@ Then use that path in your config:
 
 #### Running with Streamable HTTP Transport
 
-For remote access or HTTP-based integrations:
+For HTTP-based integrations, bind to `127.0.0.1` (localhost only) unless you explicitly need network access:
 
 ```bash
-uv run python -m lakehouse_mcp --transport streamable-http --host 0.0.0.0 --port 9000
+uv run python -m lakehouse_mcp --transport streamable-http --host 127.0.0.1 --port 9000
 ```
+
+> **Security note:** The `streamable-http` transport has no built-in authentication layer. The server uses your `WATSONX_DATA_API_KEY` to authenticate all requests to IBM Cloud on your behalf. If you bind to `0.0.0.0` (all interfaces), any client that can reach that port can invoke all tools under your IAM identity without supplying any credentials. Only use `--host 0.0.0.0` in a trusted network environment and place a reverse proxy (e.g. nginx) with authentication in front of the MCP endpoint. For single-user local use, always prefer `--host 127.0.0.1` or the default `stdio` transport.
 
 ## Available Tools
 ### Quick Reference
