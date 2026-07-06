@@ -96,7 +96,7 @@ jaraco-context==6.1.2
     # via keyring
 jaraco-functools==4.4.0
     # via keyring
-joserfc==1.6.5
+joserfc==1.6.8
     # via authlib
 jsonref==1.1.0
     # via fastmcp
