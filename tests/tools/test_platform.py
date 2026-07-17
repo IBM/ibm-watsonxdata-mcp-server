@@ -76,6 +76,7 @@ class TestGetInstanceDetails:
         # Missing fields should have defaults
         assert result["cloud_type"] == "unknown"
         assert result["account_type"] == "unknown"
+        assert result["instance_name"] is None
         assert result["version"] == "unknown"
         assert result["public_endpoints_enabled"] is False
 

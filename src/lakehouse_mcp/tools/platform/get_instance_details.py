@@ -23,12 +23,17 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
     Returns:
         Dict with instance details:
         - instance_id: Instance CRN identifier
+        - instance_name: Instance name
         - region: IBM Cloud region (e.g., "us-south")
-        - status: Instance status ("active", "provisioning", "inactive", "failed")
-        - version: watsonx.data version
+        - cloud_type: Cloud Provider (e.g., ibm cloud, azure, aws)
         - account_type: Account type ("TRIAL", "ENTERPRISE", "LITE", "STANDARD")
+        - plan_id: Plan of the watsonx.data instance
+        - instance_status: Instance status ("active", "provisioning", "inactive", "failed")
+        - version: watsonx.data version
         - serverless_spark_enabled: Whether Spark is available
         - public_endpoints_enabled: Public internet access enabled
+        - private_endpoints_enabled: Private internet access enabled
+        - resource_group_crn: Resource group the instance belongs to
         - console_url: Web console URL
     """
     watsonx_client = ctx.fastmcp.watsonx_client
@@ -68,6 +73,7 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
     # Build result with instance details
     result = {
         "instance_id": deployment.get("id", "unknown"),
+        "instance_name": deployment.get("wxd_instance_name") or None,
         "region": deployment.get("region", "unknown"),
         "cloud_type": deployment.get("cloud_type", "unknown"),
         "account_type": deployment.get("account_type", "unknown"),
