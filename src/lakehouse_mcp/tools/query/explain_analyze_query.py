@@ -38,6 +38,14 @@ async def explain_analyze_query(
     """
     watsonx_client = ctx.fastmcp.watsonx_client
 
+    sql_trimmed = statement.strip().upper()
+    if not sql_trimmed.startswith("SELECT"):
+        return {
+            "error": True,
+            "error_message": "Only SELECT queries can be analyzed. Statement must start with SELECT.",
+            "status_code": 400,
+        }
+
     # Validate engine type
     if engine_type not in ["presto", "prestissimo"]:
         return {
