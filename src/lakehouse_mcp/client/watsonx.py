@@ -73,21 +73,29 @@ class WatsonXClient:
         """Close the HTTP client."""
         await self.client.aclose()
 
+    def get_token(self) -> str:
+        """Return the current IBM IAM bearer token.
+
+        Returns:
+            Raw token string (without the "Bearer " prefix)
+        """
+        return self.authenticator.token_manager.get_token()
+
     async def _get_auth_header(self) -> dict[str, str]:
         """Get IBM IAM authorization header.
 
         Returns:
             Authorization header dict
         """
-        # IBM SDK's token_manager handles automatic refresh
-        token = self.authenticator.token_manager.get_token()
-        return {"Authorization": f"Bearer {token}"}
+        return {"Authorization": f"Bearer {self.get_token()}"}
 
-    async def get(self, path: str) -> dict[str, Any]:
+    async def get(self, path: str, extra_headers: dict[str, str] | None = None) -> dict[str, Any]:
         """Perform GET request to watsonx.data API.
 
         Args:
             path: API path (relative or absolute URL)
+            extra_headers: Optional additional headers to include in the request.
+                           These are merged on top of the standard auth headers.
 
         Returns:
             Response JSON as dictionary
@@ -102,8 +110,10 @@ class WatsonXClient:
             # Build full URL
             url = path if path.startswith("http") else f"{self.config.base_url}{path}"
 
-            # Get authorization header
+            # Get authorization header, then merge any extra headers
             auth_headers = await self._get_auth_header()
+            if extra_headers:
+                auth_headers = {**auth_headers, **extra_headers}
 
             logger.info(
                 "watsonx_get_request",
