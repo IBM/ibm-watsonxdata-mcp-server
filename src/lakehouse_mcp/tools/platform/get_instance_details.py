@@ -40,8 +40,12 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
 
     logger.info("getting_instance_details")
 
+    # IamToken header is required by /v3/instance to return the instance name.
+    # It must contain the same bearer token already used for Authorization.
+    iam_token = watsonx_client.get_token()
+
     # Make API call to get instance details
-    response = await watsonx_client.get("/v3/instance")
+    response = await watsonx_client.get("/v3/instance", extra_headers={"IamToken": f"Bearer {iam_token}"})
 
     # Handle None response
     response = response or {}

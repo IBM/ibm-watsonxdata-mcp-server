@@ -107,6 +107,20 @@ class TestGetInstanceDetails:
         assert result["status_code"] == 404
 
     @pytest.mark.asyncio
+    async def test_get_instance_details_sends_iam_token_header(self, mock_context, watsonx_client, respx_mock, mock_instance_response):
+        """Test that the IamToken header is sent and mirrors the Authorization token."""
+        route = respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(
+            return_value=httpx.Response(200, json=mock_instance_response)
+        )
+
+        await get_instance_details(mock_context)
+
+        request = route.calls.last.request
+        assert "IamToken" in request.headers
+        assert request.headers["IamToken"] == f"Bearer {watsonx_client.get_token()}"
+        assert request.headers["Authorization"] == f"Bearer {watsonx_client.get_token()}"
+
+    @pytest.mark.asyncio
     async def test_get_instance_details_timeout(self, mock_context, watsonx_client, respx_mock):
         """Test instance details with timeout."""
         respx_mock.get("https://test.watsonx.com/api/v3/instance").mock(side_effect=httpx.TimeoutException("Request timed out"))
