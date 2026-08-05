@@ -44,7 +44,7 @@ click==8.4.1
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   uvicorn
-cryptography==48.0.1
+cryptography==50.0.0
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   authlib
