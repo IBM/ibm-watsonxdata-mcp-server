@@ -8,6 +8,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any, Literal
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -72,7 +73,7 @@ async def explain_analyze_query(
         request_body["verbose"] = verbose
 
     # Call appropriate endpoint based on engine type
-    path = f"/v3/{engine_type}_engines/{engine_id}/query_explain_analyze"
+    path = f"/v3/{quote(engine_type, safe='')}_engines/{quote(engine_id, safe='')}/query_explain_analyze"
     response = await watsonx_client.post(path, request_body)
 
     # Handle None response

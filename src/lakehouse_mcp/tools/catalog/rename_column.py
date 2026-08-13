@@ -7,6 +7,7 @@ This file has been created with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -57,7 +58,7 @@ async def rename_column(
     }
 
     # Build API path
-    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}/columns/{column_name}?engine_id={engine_id}"
+    path = f"/v3/catalogs/{quote(catalog_name, safe='')}/schemas/{quote(schema_name, safe='')}/tables/{quote(table_name, safe='')}/columns/{quote(column_name, safe='')}?engine_id={quote(engine_id, safe='')}"
 
     # Make API call
     response = await watsonx_client.patch(path, body)

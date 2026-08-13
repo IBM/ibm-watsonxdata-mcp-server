@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -64,7 +65,7 @@ async def update_presto_engine(
         fields=list(body.keys()),
     )
 
-    path = f"/v3/presto_engines/{engine_id}"
+    path = f"/v3/presto_engines/{quote(engine_id, safe='')}"
     response = await watsonx_client.patch(path, body)
 
     # Check for API errors

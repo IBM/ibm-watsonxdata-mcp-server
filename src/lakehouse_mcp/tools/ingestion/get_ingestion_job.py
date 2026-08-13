@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -36,7 +37,7 @@ async def get_ingestion_job(
         job_id=job_id,
     )
 
-    path = f"/v3/lhingestion/api/v1/ingestion/jobs/{job_id}"
+    path = f"/v3/lhingestion/api/v1/ingestion/jobs/{quote(job_id, safe='')}"
     response = await watsonx_client.get(path)
 
     # Check for API errors

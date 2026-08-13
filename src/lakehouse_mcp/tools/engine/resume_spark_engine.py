@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -31,7 +32,7 @@ async def resume_spark_engine(ctx: Context, engine_id: str) -> dict[str, Any]:
     logger.info("resuming_spark_engine", engine_id=engine_id)
 
     # Resume the engine (empty POST request)
-    path = f"/v3/spark_engines/{engine_id}/resume"
+    path = f"/v3/spark_engines/{quote(engine_id, safe='')}/resume"
     response = await watsonx_client.post(path, {})
 
     # Check for API errors

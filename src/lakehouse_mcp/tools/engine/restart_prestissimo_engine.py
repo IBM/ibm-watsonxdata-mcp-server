@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -30,7 +31,7 @@ async def restart_prestissimo_engine(ctx: Context, engine_id: str) -> dict[str, 
 
     logger.info("restarting_prestissimo_engine", engine_id=engine_id)
 
-    path = f"/v3/prestissimo_engines/{engine_id}/restart"
+    path = f"/v3/prestissimo_engines/{quote(engine_id, safe='')}/restart"
     response = await watsonx_client.post(path, {})
 
     # Check for API errors

@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -52,7 +53,7 @@ async def list_spark_applications(
         query_params.append(f"limit={limit}")
     
     # Build path with query parameters
-    path = f"/v3/spark_engines/{engine_id}/applications"
+    path = f"/v3/spark_engines/{quote(engine_id, safe='')}/applications"
     if query_params:
         path = f"{path}?{'&'.join(query_params)}"
 

@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -58,7 +59,7 @@ async def describe_table(
     )
 
     # Build API path: /v3/catalogs/{catalog}/schemas/{schema}/tables/{table}?engine_id={engine_id}
-    path = f"/v3/catalogs/{catalog_name}/schemas/{schema_name}/tables/{table_name}?engine_id={engine_id}"
+    path = f"/v3/catalogs/{quote(catalog_name, safe='')}/schemas/{quote(schema_name, safe='')}/tables/{quote(table_name, safe='')}?engine_id={quote(engine_id, safe='')}"
 
     # Make API call
     response = await watsonx_client.get(path)
