@@ -7,6 +7,7 @@ This file has been created with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastmcp import Context
@@ -82,7 +83,7 @@ async def create_schema(
         body["storage_name"] = storage_name
 
     # Build API path
-    path = f"/v3/catalogs/{catalog_id}/schemas?engine_id={engine_id}"
+    path = f"/v3/catalogs/{quote(catalog_id, safe='')}/schemas?engine_id={quote(engine_id, safe='')}"
 
     # Make API call
     response = await watsonx_client.post(path, body)

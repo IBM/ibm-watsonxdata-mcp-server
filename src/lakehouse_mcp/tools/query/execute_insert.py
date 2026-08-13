@@ -9,6 +9,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 import asyncio
 import time
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -91,7 +92,7 @@ async def execute_insert(
     start_time = time.time()
 
     # Submit query - POST /v3/v1/statement?engine_id={engine_id}
-    path = f"/v3/v1/statement?engine_id={engine_id}"
+    path = f"/v3/v1/statement?engine_id={quote(engine_id, safe='')}"
     response = await watsonx_client.post(path, request_body)
 
     # Handle None response

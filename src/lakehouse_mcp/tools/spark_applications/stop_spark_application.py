@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -42,7 +43,7 @@ async def stop_spark_application(
     )
 
     # Build path with application_id in the URL path
-    path = f"/v3/spark_engines/{engine_id}/applications/{application_id}"
+    path = f"/v3/spark_engines/{quote(engine_id, safe='')}/applications/{quote(application_id, safe='')}"
     response = await watsonx_client.delete(path)
 
     # Check for API errors

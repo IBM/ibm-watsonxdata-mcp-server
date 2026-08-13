@@ -9,6 +9,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 import asyncio
 import time
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -68,7 +69,16 @@ async def execute_select(
     # Default to 500 if no limit specified to prevent large result sets
     final_sql = sql
     if "LIMIT" not in sql_trimmed:
-        applied_limit = limit if limit is not None else 500
+        if limit is not None:
+            if not isinstance(limit, int) or limit < 1 or limit > 10000:
+                return {
+                    "error": True,
+                    "error_message": "limit must be an integer between 1 and 10000",
+                    "status_code": 400,
+                }
+            applied_limit = int(limit)
+        else:
+            applied_limit = 500
         final_sql = f"{sql.rstrip(';')} LIMIT {applied_limit}"
 
     logger.info(
@@ -95,7 +105,7 @@ async def execute_select(
     start_time = time.time()
 
     # Submit query - POST /v3/v1/statement?engine_id={engine_id}
-    path = f"/v3/v1/statement?engine_id={engine_id}"
+    path = f"/v3/v1/statement?engine_id={quote(engine_id, safe='')}"
     response = await watsonx_client.post(path, request_body)
 
     # Handle None response

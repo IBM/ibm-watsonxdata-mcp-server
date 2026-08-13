@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -47,7 +48,7 @@ async def scale_spark_engine(
     body = {"number_of_nodes": number_of_nodes}
 
     # Scale the engine
-    path = f"/v3/spark_engines/{engine_id}/scale"
+    path = f"/v3/spark_engines/{quote(engine_id, safe='')}/scale"
     response = await watsonx_client.post(path, body)
 
     # Check for API errors

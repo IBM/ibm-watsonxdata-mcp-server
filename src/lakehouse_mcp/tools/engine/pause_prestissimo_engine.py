@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -31,7 +32,7 @@ async def pause_prestissimo_engine(ctx: Context, engine_id: str) -> dict[str, An
     logger.info("pausing_prestissimo_engine", engine_id=engine_id)
 
     # Pause the engine (empty POST request)
-    path = f"/v3/prestissimo_engines/{engine_id}/pause"
+    path = f"/v3/prestissimo_engines/{quote(engine_id, safe='')}/pause"
     response = await watsonx_client.post(path, {})
 
     # Check for API errors

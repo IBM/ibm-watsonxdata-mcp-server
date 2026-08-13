@@ -7,6 +7,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from typing import Any
+from urllib.parse import quote
 
 from fastmcp import Context
 
@@ -43,7 +44,7 @@ async def list_schemas(
     )
 
     # Build API path: /v3/catalogs/{catalog_name}/schemas?engine_id={engine_id}
-    path = f"/v3/catalogs/{catalog_name}/schemas?engine_id={engine_id}"
+    path = f"/v3/catalogs/{quote(catalog_name, safe='')}/schemas?engine_id={quote(engine_id, safe='')}"
 
     # Make API call
     response = await watsonx_client.get(path)
