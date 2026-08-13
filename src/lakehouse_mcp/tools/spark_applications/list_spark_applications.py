@@ -40,8 +40,7 @@ async def list_spark_applications(
     # Build query parameters
     query_params = []
     if state is not None:
-        # Convert list to comma-separated string for query parameter
-        state_param = ",".join(state)
+        state_param = ",".join(quote(s, safe='') for s in state)
         query_params.append(f"state={state_param}")
     if limit is not None:
         if limit < 1 or limit > 1000:

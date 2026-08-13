@@ -38,9 +38,21 @@ async def list_ingestion_jobs(
     query_params = []
     
     if start is not None:
-        query_params.append(f"start={start}")
+        if not isinstance(start, int) or start < 0:
+            return {
+                "error": True,
+                "error_message": "start must be a non-negative integer",
+                "status_code": 400,
+            }
+        query_params.append(f"start={int(start)}")
     if limit is not None:
-        query_params.append(f"limit={limit}")
+        if not isinstance(limit, int) or (limit != -1 and (limit < 1 or limit > 100)):
+            return {
+                "error": True,
+                "error_message": "limit must be -1 (all) or an integer between 1 and 100",
+                "status_code": 400,
+            }
+        query_params.append(f"limit={int(limit)}")
     
     if query_params:
         path = f"{path}?{'&'.join(query_params)}"
