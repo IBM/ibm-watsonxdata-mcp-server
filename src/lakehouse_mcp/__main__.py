@@ -231,8 +231,8 @@ For more information, see: https://github.com/IBM/ibm-watsonxdata-mcp-server
     parser.add_argument(
         "--host",
         type=str,
-        default="0.0.0.0",
-        help="Host to bind to when using streamable-http transport (default: 0.0.0.0)",
+        default="127.0.0.1",
+        help="Host to bind to when using streamable-http transport (default: 127.0.0.1)",
     )
 
     return parser.parse_args()
@@ -278,8 +278,19 @@ def main() -> None:
     try:
         # Run with selected transport (suppress banner for clean logs)
         if args.transport == "streamable-http":
+            from starlette.middleware import Middleware
+
+            from lakehouse_mcp.http_security import DNSRebindingProtectionMiddleware
+
+            logger.warning(
+                "http_transport_active",
+                host=args.host,
+                port=args.port,
+                message="Streamable HTTP transport is active. DNS rebinding protection is enabled. Do not expose this port to untrusted networks.",
+            )
             logger.info("http_server_starting", host=args.host, port=args.port)
-            mcp.run(transport="streamable-http", host=args.host, port=args.port, show_banner=False)
+            security_middleware = [Middleware(DNSRebindingProtectionMiddleware)]
+            mcp.run(transport="streamable-http", host=args.host, port=args.port, show_banner=False, middleware=security_middleware)
         else:
             # Run with stdio transport (default, for Claude Desktop)
             mcp.run(transport="stdio", show_banner=False)
