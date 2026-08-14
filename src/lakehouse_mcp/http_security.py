@@ -1,5 +1,7 @@
 """
 DNS rebinding protection middleware for Streamable HTTP transport.
+
+This file has been modified with the assistance of IBM Bob AI tool
 """
 
 from __future__ import annotations
