@@ -40,12 +40,19 @@ async def get_instance_details(ctx: Context) -> dict[str, Any]:
 
     logger.info("getting_instance_details")
 
-    # IamToken header is required by /v3/instance to return the instance name.
-    # It must contain the same bearer token already used for Authorization.
-    iam_token = watsonx_client.get_token()
+    # IamToken header is required by /v3/instance on SaaS to return the instance name.
+    # For SaaS, it must contain the same bearer token already used for Authorization.
+    # For CPD, get_token() returns the ZenApiKey or token if available.
+    extra_headers = {}
+    token = watsonx_client.get_token()
+    if token:
+        if token.startswith("ZenApiKey "):
+            extra_headers["IamToken"] = token
+        else:
+            extra_headers["IamToken"] = f"Bearer {token}"
 
     # Make API call to get instance details
-    response = await watsonx_client.get("/v3/instance", extra_headers={"IamToken": f"Bearer {iam_token}"})
+    response = await watsonx_client.get("/v3/instance", extra_headers=extra_headers if extra_headers else None)
 
     # Handle None response
     response = response or {}
