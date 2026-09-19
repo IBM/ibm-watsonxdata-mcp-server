@@ -6,7 +6,7 @@ analytics-python==1.4.post1
     # via ibm-watsonxdata-mcp-server (pyproject.toml)
 annotated-types==0.7.0
     # via pydantic
-anyio==4.13.0
+anyio==4.14.2
     # via
     #   httpx
     #   mcp
