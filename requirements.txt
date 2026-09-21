@@ -6,8 +6,9 @@ analytics-python==1.4.post1
     # via ibm-watsonxdata-mcp-server (pyproject.toml)
 annotated-types==0.7.0
     # via pydantic
-anyio==4.13.0
+anyio==4.15.1
     # via
+    #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   httpx
     #   mcp
     #   py-key-value-aio
@@ -102,6 +103,7 @@ jaraco-functools==4.4.0
     # via keyring
 joserfc==1.7.4
     # via
+    #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   authlib
     #   fastmcp-slim
 jsonref==1.1.0
@@ -237,8 +239,9 @@ starlette==1.3.1
     #   sse-starlette
 structlog==25.5.0
     # via ibm-watsonxdata-mcp-server (pyproject.toml)
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
+    #   anyio
     #   fastmcp-slim
     #   mcp
     #   opentelemetry-api
