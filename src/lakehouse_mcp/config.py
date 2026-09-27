@@ -6,12 +6,12 @@ This module provides type-safe configuration loading from environment variables.
 This file has been modified with the assistance of IBM Bob AI tool
 """
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class WatsonXConfig(BaseSettings):
-    """watsonx.data API configuration."""
+    """watsonx.data API configuration for SaaS and on-Prem (CPD/Software)."""
 
     model_config = SettingsConfigDict(
         env_prefix="WATSONX_DATA_",
@@ -21,19 +21,33 @@ class WatsonXConfig(BaseSettings):
         extra="ignore",
     )
 
+    auth_type: str | None = Field(
+        default=None,
+        description=(
+            "Authentication and environment type: 'saas' (IBM Cloud IAM) or 'cpd' (Cloud Pak for Data / Software). "
+            "If omitted, inferred from instance_id."
+        ),
+    )
     base_url: str = Field(
         ...,
         description="watsonx.data API base URL",
-        examples=["https://console-ibm-ussouth.lakehouse.test.saas.ibm.com/lakehouse/api"],
+        examples=[
+            "https://console-ibm-ussouth.lakehouse.test.saas.ibm.com/lakehouse/api",
+            "https://cpd-instance.apps.mycluster.example.com/lakehouse/api",
+        ],
     )
     api_key: str = Field(
         ...,
-        description="IBM Cloud IAM API key",
+        description="IBM Cloud IAM API key (for SaaS) or platform API key (for CPD)",
+    )
+    username: str | None = Field(
+        default=None,
+        description="CPD username (required for CPD auth)",
     )
     instance_id: str = Field(
         ...,
-        description="watsonx.data instance ID (CRN)",
-        examples=["crn:v1:bluemix:public:lakehouse:us-south:a/..."],
+        description="watsonx.data instance ID or CRN (e.g., CRN for SaaS or numerical/string ID for CPD)",
+        examples=["crn:v1:bluemix:public:lakehouse:us-south:a/...", "1609968977179454"],
     )
     timeout_seconds: int = Field(
         default=120,
@@ -45,6 +59,25 @@ class WatsonXConfig(BaseSettings):
         default=False,
         description="Skip TLS certificate verification (dev/test only)",
     )
+
+    @model_validator(mode="after")
+    def validate_auth_credentials(self) -> "WatsonXConfig":
+        """Validate and infer auth_type and required credentials."""
+        # Infer auth_type if not provided
+        if not self.auth_type:
+            if self.instance_id.startswith("crn:"):
+                self.auth_type = "saas"
+            else:
+                self.auth_type = "cpd"
+        else:
+            self.auth_type = self.auth_type.lower()
+            if self.auth_type not in ("saas", "cpd"):
+                raise ValueError("auth_type must be either 'saas' or 'cpd'")
+
+        if self.auth_type == "cpd" and not self.username:
+            raise ValueError("WATSONX_DATA_USERNAME is required for CPD (on-Prem/Software) authentication")
+
+        return self
 
 
 class ServerConfig(BaseSettings):

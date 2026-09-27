@@ -1,9 +1,10 @@
 """
-watsonx.data REST API client with IBM IAM authentication.
+watsonx.data REST API client supporting SaaS (IBM IAM) and on-Prem (CPD/Software).
 
-This module provides async HTTP client for watsonx.data API with:
-- IBM Cloud IAM authentication
-- Automatic token refresh
+This module provides an async HTTP client for watsonx.data API with:
+- IBM Cloud IAM authentication (SaaS)
+- ZenApiKey authentication (CPD/Software)
+- Automatic token refresh (for IAM)
 - OpenTelemetry instrumentation
 - Structured logging
 
@@ -12,6 +13,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 from __future__ import annotations
 
+import base64
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -37,12 +39,25 @@ class WatsonXClient:
         """
         self.config = config
         self.logger = logger
+        self.auth_type = (config.auth_type or "saas").lower()
 
-        # Create IBM IAM authenticator
-        self.authenticator = IAMAuthenticator(
-            apikey=config.api_key,
-            disable_ssl_verification=config.tls_insecure_skip_verify,
-        )
+        # Auth state variables
+        self.authenticator: IAMAuthenticator | None = None
+        self._zen_api_key_header: str | None = None
+        self._auth_method: str = ""
+
+        if self.auth_type == "cpd":
+            # ZenApiKey flow: Authorization: ZenApiKey base64("username:api_key")
+            token_bytes = f"{config.username}:{config.api_key}".encode()
+            self._zen_api_key_header = "ZenApiKey " + base64.b64encode(token_bytes).decode("ascii")
+            self._auth_method = "zen_api_key"
+        else:
+            # SaaS IAM flow
+            self._auth_method = "iam"
+            self.authenticator = IAMAuthenticator(
+                apikey=config.api_key,
+                disable_ssl_verification=config.tls_insecure_skip_verify,
+            )
 
         # Create async HTTP client with httpx
         self.client = httpx.AsyncClient(
@@ -58,6 +73,8 @@ class WatsonXClient:
         logger.debug(
             "watsonx_client_initialized",
             base_url=config.base_url,
+            auth_type=self.auth_type,
+            auth_method=self._auth_method,
             timeout=config.timeout_seconds,
         )
 
@@ -74,19 +91,30 @@ class WatsonXClient:
         await self.client.aclose()
 
     def get_token(self) -> str:
-        """Return the current IBM IAM bearer token.
+        """Return the current auth token or key representation.
+
+        For SaaS, returns the IAM bearer token.
+        For CPD with ZenApiKey, returns the ZenApiKey header value.
 
         Returns:
-            Raw token string (without the "Bearer " prefix)
+            Token string
         """
-        return self.authenticator.token_manager.get_token()
+        if self.auth_type == "cpd":
+            return self._zen_api_key_header or ""
+        if self.authenticator:
+            return self.authenticator.token_manager.get_token()
+        return ""
 
     async def _get_auth_header(self) -> dict[str, str]:
-        """Get IBM IAM authorization header.
+        """Get authorization header for requests based on authentication type.
 
         Returns:
             Authorization header dict
         """
+        if self.auth_type == "cpd":
+            return {"Authorization": self._zen_api_key_header or ""}
+
+        # Default: SaaS IAM
         return {"Authorization": f"Bearer {self.get_token()}"}
 
     async def get(self, path: str, extra_headers: dict[str, str] | None = None) -> dict[str, Any]:
