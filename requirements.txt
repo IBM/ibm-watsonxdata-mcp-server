@@ -258,7 +258,7 @@ typing-inspection==0.4.2
     #   pydantic-settings
 uncalled-for==0.2.0
     # via fastmcp-slim
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   ibm-cloud-sdk-core
