@@ -181,7 +181,7 @@ pydantic-settings==2.14.2
     #   mcp
 pygments==2.20.0
     # via rich
-pyjwt==2.13.0
+pyjwt==2.15.1
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   ibm-cloud-sdk-core
@@ -258,7 +258,7 @@ typing-inspection==0.4.2
     #   pydantic-settings
 uncalled-for==0.2.0
     # via fastmcp-slim
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   ibm-watsonxdata-mcp-server (pyproject.toml)
     #   ibm-cloud-sdk-core
