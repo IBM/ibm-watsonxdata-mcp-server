@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from lakehouse_mcp.client.watsonx import WatsonXClient
+from lakehouse_mcp.config import WatsonXConfig
 
 
 class TestWatsonXClient:
@@ -509,3 +510,55 @@ class TestWatsonXClient:
         assert result["error"] is True
         assert result["error_message"] == "HTTP 502: Bad Gateway"
         assert result["status_code"] == 502
+
+    @pytest.mark.asyncio
+    async def test_cpd_zen_api_key_auth(self, monkeypatch, tmp_path, respx_mock):
+        """Test CPD client with ZenApiKey authentication."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("WATSONX_DATA_AUTH_TYPE", "cpd")
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_USERNAME", "admin")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "cpd_api_key_123")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "1609968977179454")
+
+        config = WatsonXConfig()
+        client = WatsonXClient(config)
+
+        # Expected base64("admin:cpd_api_key_123") -> "YWRtaW46Y3BkX2FwaV9rZXlfMTIz"
+        expected_zen_header = "ZenApiKey YWRtaW46Y3BkX2FwaV9rZXlfMTIz"
+        assert client.get_token() == expected_zen_header
+
+        auth_header = await client._get_auth_header()
+        assert auth_header == {"Authorization": expected_zen_header}
+
+        respx_mock.get("https://cpd.example.com/lakehouse/api/v2/engines").mock(
+            return_value=httpx.Response(200, json={"status": "ok"})
+        )
+
+        res = await client.get("/v2/engines")
+        assert res == {"status": "ok"}
+        assert respx_mock.calls.last.request.headers["Authorization"] == expected_zen_header
+        assert respx_mock.calls.last.request.headers["AuthInstanceId"] == "1609968977179454"
+
+        await client.close()
+
+    @pytest.mark.asyncio
+    async def test_cpd_zen_api_key_inferred_from_instance_id(self, monkeypatch, tmp_path, respx_mock):
+        """Test CPD client auth inference from numerical instance_id."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("WATSONX_DATA_AUTH_TYPE", raising=False)
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_USERNAME", "cpd_user")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "platform_key_abc")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "123456789")
+
+        config = WatsonXConfig()
+        assert config.auth_type == "cpd"
+
+        client = WatsonXClient(config)
+        assert client.auth_type == "cpd"
+
+        # base64("cpd_user:platform_key_abc") -> "Y3BkX3VzZXI6cGxhdGZvcm1fa2V5X2FiYw=="
+        assert client.get_token() == "ZenApiKey Y3BkX3VzZXI6cGxhdGZvcm1fa2V5X2FiYw=="
+
+        await client.close()

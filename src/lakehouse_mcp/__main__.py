@@ -176,8 +176,10 @@ Examples:
 
 Environment Variables:
   WATSONX_DATA_BASE_URL       watsonx.data API base URL (required)
-  WATSONX_DATA_API_KEY        IBM Cloud IAM API key (required)
-  WATSONX_DATA_INSTANCE_ID    watsonx.data instance CRN (required)
+  WATSONX_DATA_API_KEY        IBM Cloud IAM API key or CPD platform API key (required)
+  WATSONX_DATA_INSTANCE_ID    watsonx.data instance CRN or cluster instance ID (required)
+  WATSONX_DATA_USERNAME       CPD username (required for CPD on-Premises/Software)
+  WATSONX_DATA_AUTH_TYPE      Auth type override: saas or cpd (optional, auto-inferred)
   LOG_LEVEL                   Logging level (default: info)
   OTEL_ENABLED                Enable OpenTelemetry (default: false)
 

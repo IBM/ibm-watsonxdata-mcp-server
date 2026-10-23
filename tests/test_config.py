@@ -17,11 +17,35 @@ class TestWatsonXConfig:
         """Test creating config with valid environment variables."""
         config = WatsonXConfig()
 
+        assert config.auth_type == "saas"
         assert config.base_url == "https://test.watsonx.com/api"
         assert config.api_key == "test_api_key_12345"
         assert config.instance_id == "crn:v1:bluemix:public:lakehouse:us-south:a/test123:instance456::"
         assert config.timeout_seconds == 60
         assert config.tls_insecure_skip_verify is False
+
+    def test_inferred_saas_auth_type_from_crn(self, monkeypatch, tmp_path):
+        """Test auth_type is inferred as 'saas' when instance_id starts with 'crn:'."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("WATSONX_DATA_AUTH_TYPE", raising=False)
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://test.watsonx.com/api")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "test_key")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "crn:v1:bluemix:public:lakehouse:us-south:a/test:123::")
+
+        config = WatsonXConfig()
+        assert config.auth_type == "saas"
+
+    def test_inferred_cpd_auth_type_from_non_crn(self, monkeypatch, tmp_path):
+        """Test auth_type is inferred as 'cpd' when instance_id does not start with 'crn:'."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("WATSONX_DATA_AUTH_TYPE", raising=False)
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_USERNAME", "admin")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "cpd_api_key_123")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "1609968977179454")
+
+        config = WatsonXConfig()
+        assert config.auth_type == "cpd"
 
     def test_missing_required_fields(self, monkeypatch, tmp_path):
         """Test that missing required fields raise validation error."""
@@ -41,6 +65,46 @@ class TestWatsonXConfig:
         assert "base_url" in error_str
         assert "api_key" in error_str
         assert "instance_id" in error_str
+
+    def test_cpd_config_valid_explicit_auth_type(self, monkeypatch, tmp_path):
+        """Test valid CPD config with explicit auth_type."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("WATSONX_DATA_AUTH_TYPE", "cpd")
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_USERNAME", "admin")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "cpd_api_key_123")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "1609968977179454")
+
+        config = WatsonXConfig()
+        assert config.auth_type == "cpd"
+        assert config.username == "admin"
+        assert config.api_key == "cpd_api_key_123"
+        assert config.instance_id == "1609968977179454"
+
+    def test_cpd_config_missing_username(self, monkeypatch, tmp_path):
+        """Test CPD config without username raises ValidationError."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("WATSONX_DATA_USERNAME", raising=False)
+        monkeypatch.setenv("WATSONX_DATA_AUTH_TYPE", "cpd")
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "cpd_api_key_123")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "1609968977179454")
+
+        with pytest.raises(ValidationError) as exc_info:
+            WatsonXConfig()
+        assert "WATSONX_DATA_USERNAME is required for CPD" in str(exc_info.value)
+
+    def test_invalid_auth_type(self, monkeypatch, tmp_path):
+        """Test invalid auth_type raises ValidationError."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("WATSONX_DATA_AUTH_TYPE", "unsupported_type")
+        monkeypatch.setenv("WATSONX_DATA_BASE_URL", "https://cpd.example.com/lakehouse/api")
+        monkeypatch.setenv("WATSONX_DATA_API_KEY", "cpd_api_key_123")
+        monkeypatch.setenv("WATSONX_DATA_INSTANCE_ID", "1609968977179454")
+
+        with pytest.raises(ValidationError) as exc_info:
+            WatsonXConfig()
+        assert "auth_type must be either 'saas' or 'cpd'" in str(exc_info.value)
 
     def test_default_timeout(self, monkeypatch):
         """Test default timeout value."""

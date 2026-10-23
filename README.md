@@ -27,7 +27,8 @@ Currently, it supports stdio transport for local subprocess and streamable HTTP.
 - **Ingestion Tools**: Data loading from object storage (CSV, Parquet, JSON)
 
 ### Security & Authentication
-- IBM Cloud IAM authentication with automatic token refresh
+- Support for watsonx.data SaaS (IBM Cloud IAM with automatic token refresh) and on-Premises (IBM Cloud Pak for Data / Software via ZenApiKey)
+- Automatic authentication type inference based on `WATSONX_DATA_INSTANCE_ID`
 - Read and write operations with appropriate access controls
 
 ### Transport & Integration
@@ -78,16 +79,17 @@ Before installation, ensure you have:
 
 - **Python 3.11 or higher** ([Download](https://www.python.org/downloads/))
 - **uv package manager** ([Install](https://github.com/astral-sh/uv))
-- **IBM Cloud account** ([Create Account](https://cloud.ibm.com/docs/account?topic=account-account-getting-started))
-- **watsonx.data instance** ([Provision Instance](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_prov_lite_1)) and ([Setup](https://cloud.ibm.com/docs/watsonxdata?topic=watsonxdata-tutorial_hp_intro))
-- **IBM Cloud API key** ([Create API Key](https://cloud.ibm.com/iam/apikeys))
-- Gather Instance details:
-  - **Base URL**: Obtain from your watsonx.data instance:
-    - Option 1: Copy the hostname from your browser's address bar when accessing the instance, then append `/lakehouse/api`
-    - Option 2: Navigate to instance details → **Data Access Service (DAS) endpoint**
-    - Example format: `https://us-south.lakehouse.cloud.ibm.com/lakehouse/api`
-  - **Instance CRN** (e.g., `crn:v1:bluemix:public:lakehouse:us-south:a/...`)
-  - **IAM API Key** with access to watsonx.data instance, catalog and engines
+- **watsonx.data instance** (SaaS on IBM Cloud or on-Prem / CPD Software)
+- Gather connection details:
+  - **For SaaS (IBM Cloud)**:
+    - **Base URL**: e.g., `https://us-south.lakehouse.cloud.ibm.com/lakehouse/api`
+    - **Instance ID**: Instance CRN (e.g., `crn:v1:bluemix:public:lakehouse:us-south:a/...`)
+    - **API Key**: IBM Cloud IAM API Key ([Create API Key](https://cloud.ibm.com/iam/apikeys))
+  - **For on-Prem (Cloud Pak for Data / Software)**:
+    - **Base URL**: e.g., `https://cpd-instance.apps.mycluster.example.com/lakehouse/api`
+    - **Instance ID**: Cluster instance ID (e.g., `1609968977179454`)
+    - **Username**: CPD username
+    - **API Key**: Platform API key generated from CPD user Profile & Settings
 
 ### 2. Installation
 
