@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     # MCP Framework
-    "fastmcp>=3.4.4",
+    "fastmcp>=4.1.2",
     "mcp>=1.30.0",
     # ASGI Server (for SSL support)
     "uvicorn>=0.30.0",
