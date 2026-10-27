@@ -9,8 +9,8 @@ This file has been created with the assistance of IBM Bob AI tool
 from typing import Any
 from urllib.parse import quote
 
-import httpx
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -59,11 +59,7 @@ async def create_schema(
 
     # Validate custom_path
     if not custom_path or len(custom_path) < 1:
-        return {
-            "error": True,
-            "error_message": "custom_path must be at least 1 character long",
-            "status_code": 400,
-        }
+        raise ToolError("custom_path must be at least 1 character long")
 
     logger.info(
         "creating_schema",
@@ -87,21 +83,7 @@ async def create_schema(
 
     # Make API call
     response = await watsonx_client.post(path, body)
-    
-    # Check for API errors
-    if response.get("error"):
-        logger.error(
-            "schema_creation_failed",
-            catalog_id=catalog_id,
-            schema_name=schema_name,
-            error=response.get("error_message"),
-        )
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
-    
+
     logger.info(
         "schema_created",
         catalog_id=catalog_id,

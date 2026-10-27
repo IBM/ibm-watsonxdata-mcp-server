@@ -11,6 +11,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -41,19 +42,11 @@ async def explain_analyze_query(
 
     sql_trimmed = statement.strip().upper()
     if not sql_trimmed.startswith("SELECT"):
-        return {
-            "error": True,
-            "error_message": "Only SELECT queries can be analyzed. Statement must start with SELECT.",
-            "status_code": 400,
-        }
+        raise ToolError("Only SELECT queries can be analyzed. Statement must start with SELECT.")
 
     # Validate engine type
     if engine_type not in ["presto", "prestissimo"]:
-        return {
-            "error": True,
-            "error_message": f"Invalid engine_type: {engine_type}. Must be 'presto' or 'prestissimo'",
-            "status_code": 400,
-        }
+        raise ToolError(f"Invalid engine_type: {engine_type}. Must be 'presto' or 'prestissimo'")
 
     logger.info(
         "explaining_analyzing_query",
@@ -78,15 +71,6 @@ async def explain_analyze_query(
 
     # Handle None response
     response = response or {}
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("explain_analyze_query_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     logger.info(
         "query_explained_analyzed",

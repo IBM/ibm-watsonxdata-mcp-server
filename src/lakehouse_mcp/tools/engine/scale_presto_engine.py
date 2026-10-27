@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -52,18 +53,10 @@ async def scale_presto_engine(
 
     # Validate inputs
     if coordinator_quantity != 1:
-        return {
-            "error": True,
-            "error_message": f"coordinator_quantity must be 1 for Presto engines, got {coordinator_quantity}",
-            "status_code": 400,
-        }
-    
+        raise ToolError(f"coordinator_quantity must be 1 for Presto engines, got {coordinator_quantity}")
+
     if worker_quantity < 1 or worker_quantity > 1000:
-        return {
-            "error": True,
-            "error_message": f"worker_quantity must be between 1 and 1000 (1-18 recommended), got {worker_quantity}",
-            "status_code": 400,
-        }
+        raise ToolError(f"worker_quantity must be between 1 and 1000 (1-18 recommended), got {worker_quantity}")
 
     # Note: Node type validation removed - API accepts various node types depending on environment
     # Common types: "starter", "cache_optimized", but others may be available
@@ -89,15 +82,6 @@ async def scale_presto_engine(
 
     path = f"/v3/presto_engines/{quote(engine_id, safe='')}/scale"
     response = await watsonx_client.post(path, body)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("scale_presto_engine_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     logger.info(
         "presto_engine_scaled",

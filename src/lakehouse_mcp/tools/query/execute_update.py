@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -50,28 +51,16 @@ async def execute_update(
 
     # Validate SQL is not empty
     if not sql or not sql.strip():
-        return {
-            "error": True,
-            "error_message": "SQL query cannot be empty",
-            "status_code": 400,
-        }
+        raise ToolError("SQL query cannot be empty")
 
     # Validate query is an UPDATE statement
     sql_trimmed = sql.strip().upper()
     if not sql_trimmed.startswith("UPDATE"):
-        return {
-            "error": True,
-            "error_message": "Only UPDATE queries are allowed. Query must start with UPDATE keyword.",
-            "status_code": 400,
-        }
+        raise ToolError("Only UPDATE queries are allowed. Query must start with UPDATE keyword.")
 
     # Check for unsafe operations (semicolon-separated statements, etc.)
     if ";" in sql.rstrip(";"):
-        return {
-            "error": True,
-            "error_message": "Multiple statements not allowed. Query must be a single UPDATE statement.",
-            "status_code": 400,
-        }
+        raise ToolError("Multiple statements not allowed. Query must be a single UPDATE statement.")
     
     logger.info(
         "executing_update_query",
@@ -101,15 +90,6 @@ async def execute_update(
     # Handle None response
     response = response or {}
 
-    # Check for HTTP-level API errors (not query execution errors)
-    # HTTP errors have status_code key, query errors are in response.data.stats.state
-    if response.get("error") and "status_code" in response:
-        logger.error("execute_update_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     # Response is nested under "data" key
     data = response.get("data", {}) or {}
@@ -148,30 +128,18 @@ async def execute_update(
 
         # Check for error states
         if state == "FAILED":
-            error = response.get("error", {}) or {}
+            error = response.get("error", {}) or {}  # API query-level error field, not a transport error
             error_message = error.get("message", "Unknown error")
             logger.error("update_query_failed", query_id=query_id, error=error_message)
-            return {
-                "error": True,
-                "error_message": f"UPDATE query failed: {error_message}",
-                "status_code": 0,
-            }
+            raise ToolError(f"UPDATE query failed: {error_message}")
 
         if state == "CANCELED":
             logger.error("update_query_canceled", query_id=query_id)
-            return {
-                "error": True,
-                "error_message": "UPDATE query was canceled",
-                "status_code": 0,
-            }
+            raise ToolError("UPDATE query was canceled")
 
         if elapsed_time >= max_wait_time:
             logger.error("update_query_timeout", query_id=query_id, elapsed_time=elapsed_time)
-            return {
-                "error": True,
-                "error_message": f"UPDATE query {query_id} did not complete within {max_wait_time} seconds",
-                "status_code": 0,
-            }
+            raise ToolError(f"UPDATE query {query_id} did not complete within {max_wait_time} seconds")
 
         # Wait before polling
         await asyncio.sleep(poll_interval)
@@ -188,15 +156,6 @@ async def execute_update(
         response = await watsonx_client.post(path, poll_request_body)
         response = response or {}
 
-        # Check for API errors during polling
-        if response.get("error"):
-            logger.error("execute_update_polling_failed", error=response.get("error_message"))
-            return {
-                "error": True,
-                "error_message": response.get("error_message", "Unknown error"),
-                "status_code": response.get("status_code", 0),
-            }
-
         data = response.get("data", {}) or {}
 
         # Update state
@@ -212,11 +171,7 @@ async def execute_update(
             empty_response_count += 1
             if empty_response_count >= 3:
                 logger.error("update_query_empty_responses", query_id=query_id, count=empty_response_count)
-                return {
-                    "error": True,
-                    "error_message": f"UPDATE query execution failed: received multiple empty responses. Query ID: {query_id}",
-                    "status_code": 0,
-                }
+                raise ToolError(f"UPDATE query execution failed: received multiple empty responses. Query ID: {query_id}")
         else:
             empty_response_count = 0
 

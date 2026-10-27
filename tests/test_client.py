@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.client.watsonx import WatsonXClient
 
@@ -83,27 +84,23 @@ class TestWatsonXClient:
 
     @pytest.mark.asyncio
     async def test_get_request_404_error(self, watsonx_client, respx_mock):
-        """Test GET request with 404 error."""
+        """Test GET request with 404 error raises ToolError."""
         respx_mock.get("https://test.watsonx.com/api/v2/notfound").mock(return_value=httpx.Response(404, json={"message": "Not found"}))
 
-        result = await watsonx_client.get("/v2/notfound")
-
-        assert result["error"] is True
-        assert "Not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.get("/v2/notfound")
+        assert "Not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_request_500_error(self, watsonx_client, respx_mock):
-        """Test GET request with 500 error."""
+        """Test GET request with 500 error raises ToolError."""
         respx_mock.get("https://test.watsonx.com/api/v2/error").mock(
             return_value=httpx.Response(500, json={"message": "Internal server error"})
         )
 
-        result = await watsonx_client.get("/v2/error")
-
-        assert result["error"] is True
-        assert "Internal server error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.get("/v2/error")
+        assert "Internal server error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_request_timeout(self, watsonx_client, respx_mock):
@@ -115,16 +112,14 @@ class TestWatsonXClient:
 
     @pytest.mark.asyncio
     async def test_get_request_non_json_error(self, watsonx_client, respx_mock):
-        """Test GET request error when response body is not JSON."""
+        """Test GET request error when response body is not JSON raises ToolError."""
         respx_mock.get("https://test.watsonx.com/api/v2/non-json-error").mock(
             return_value=httpx.Response(502, text="Bad gateway")
         )
 
-        result = await watsonx_client.get("/v2/non-json-error")
-
-        assert result["error"] is True
-        assert result["error_message"] == "HTTP 502: Bad Gateway"
-        assert result["status_code"] == 502
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.get("/v2/non-json-error")
+        assert "HTTP 502" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_post_request_relative_path(self, watsonx_client, respx_mock):
@@ -194,31 +189,27 @@ class TestWatsonXClient:
 
     @pytest.mark.asyncio
     async def test_post_request_400_error(self, watsonx_client, respx_mock):
-        """Test POST request with 400 Bad Request error."""
+        """Test POST request with 400 Bad Request error raises ToolError."""
         request_body = {"invalid": "data"}
 
         respx_mock.post("https://test.watsonx.com/api/v3/query").mock(return_value=httpx.Response(400, json={"message": "Invalid request"}))
 
-        result = await watsonx_client.post("/v3/query", request_body)
-
-        assert result["error"] is True
-        assert "Invalid request" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.post("/v3/query", request_body)
+        assert "Invalid request" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_post_request_non_json_error(self, watsonx_client, respx_mock):
-        """Test POST request error when response body is not JSON."""
+        """Test POST request error when response body is not JSON raises ToolError."""
         request_body = {"test": "data"}
 
         respx_mock.post("https://test.watsonx.com/api/v3/non-json-error").mock(
             return_value=httpx.Response(503, text="Service unavailable")
         )
 
-        result = await watsonx_client.post("/v3/non-json-error", request_body)
-
-        assert result["error"] is True
-        assert result["error_message"] == "HTTP 503: Service Unavailable"
-        assert result["status_code"] == 503
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.post("/v3/non-json-error", request_body)
+        assert "HTTP 503" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_post_request_with_auth_headers(self, watsonx_client, respx_mock):
@@ -344,63 +335,55 @@ class TestWatsonXClient:
 
     @pytest.mark.asyncio
     async def test_patch_request_400_error(self, watsonx_client, respx_mock):
-        """Test PATCH request with 400 Bad Request error."""
+        """Test PATCH request with 400 Bad Request error raises ToolError."""
         request_body = {"invalid": "data"}
 
         respx_mock.patch("https://test.watsonx.com/api/v2/engines/test").mock(
             return_value=httpx.Response(400, json={"message": "Invalid request"})
         )
 
-        result = await watsonx_client.patch("/v2/engines/test", request_body)
-
-        assert result["error"] is True
-        assert "Invalid request" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.patch("/v2/engines/test", request_body)
+        assert "Invalid request" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_patch_request_404_error(self, watsonx_client, respx_mock):
-        """Test PATCH request with 404 Not Found error."""
+        """Test PATCH request with 404 Not Found error raises ToolError."""
         request_body = {"description": "test"}
 
         respx_mock.patch("https://test.watsonx.com/api/v2/engines/nonexistent").mock(
             return_value=httpx.Response(404, json={"message": "Engine not found"})
         )
 
-        result = await watsonx_client.patch("/v2/engines/nonexistent", request_body)
-
-        assert result["error"] is True
-        assert "Engine not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.patch("/v2/engines/nonexistent", request_body)
+        assert "Engine not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_patch_request_500_error(self, watsonx_client, respx_mock):
-        """Test PATCH request with 500 Internal Server Error."""
+        """Test PATCH request with 500 Internal Server Error raises ToolError."""
         request_body = {"description": "test"}
 
         respx_mock.patch("https://test.watsonx.com/api/v2/engines/error").mock(
             return_value=httpx.Response(500, json={"message": "Internal server error"})
         )
 
-        result = await watsonx_client.patch("/v2/engines/error", request_body)
-
-        assert result["error"] is True
-        assert "Internal server error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.patch("/v2/engines/error", request_body)
+        assert "Internal server error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_patch_request_non_json_error(self, watsonx_client, respx_mock):
-        """Test PATCH request error when response body is not JSON."""
+        """Test PATCH request error when response body is not JSON raises ToolError."""
         request_body = {"description": "test"}
 
         respx_mock.patch("https://test.watsonx.com/api/v2/engines/non-json-error").mock(
             return_value=httpx.Response(502, text="Bad gateway")
         )
 
-        result = await watsonx_client.patch("/v2/engines/non-json-error", request_body)
-
-        assert result["error"] is True
-        assert result["error_message"] == "HTTP 502: Bad Gateway"
-        assert result["status_code"] == 502
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.patch("/v2/engines/non-json-error", request_body)
+        assert "HTTP 502" in str(exc_info.value)
 
     # DELETE method tests
 
@@ -460,52 +443,44 @@ class TestWatsonXClient:
 
     @pytest.mark.asyncio
     async def test_delete_request_404_error(self, watsonx_client, respx_mock):
-        """Test DELETE request with 404 Not Found error."""
+        """Test DELETE request with 404 Not Found error raises ToolError."""
         respx_mock.delete("https://test.watsonx.com/api/v2/engines/nonexistent").mock(
             return_value=httpx.Response(404, json={"message": "Engine not found"})
         )
 
-        result = await watsonx_client.delete("/v2/engines/nonexistent")
-
-        assert result["error"] is True
-        assert "Engine not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.delete("/v2/engines/nonexistent")
+        assert "Engine not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_delete_request_500_error(self, watsonx_client, respx_mock):
-        """Test DELETE request with 500 Internal Server Error."""
+        """Test DELETE request with 500 Internal Server Error raises ToolError."""
         respx_mock.delete("https://test.watsonx.com/api/v2/engines/error").mock(
             return_value=httpx.Response(500, json={"message": "Internal server error"})
         )
 
-        result = await watsonx_client.delete("/v2/engines/error")
-
-        assert result["error"] is True
-        assert "Internal server error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.delete("/v2/engines/error")
+        assert "Internal server error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_delete_request_401_unauthorized(self, watsonx_client, respx_mock):
-        """Test DELETE request with 401 Unauthorized error."""
+        """Test DELETE request with 401 Unauthorized error raises ToolError."""
         respx_mock.delete("https://test.watsonx.com/api/v2/engines/test").mock(
             return_value=httpx.Response(401, json={"message": "Unauthorized"})
         )
 
-        result = await watsonx_client.delete("/v2/engines/test")
-
-        assert result["error"] is True
-        assert "Unauthorized" in result["error_message"]
-        assert result["status_code"] == 401
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.delete("/v2/engines/test")
+        assert "Unauthorized" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_delete_request_non_json_error(self, watsonx_client, respx_mock):
-        """Test DELETE request error when response body is not JSON."""
+        """Test DELETE request error when response body is not JSON raises ToolError."""
         respx_mock.delete("https://test.watsonx.com/api/v2/engines/non-json-error").mock(
             return_value=httpx.Response(502, text="Bad gateway")
         )
 
-        result = await watsonx_client.delete("/v2/engines/non-json-error")
-
-        assert result["error"] is True
-        assert result["error_message"] == "HTTP 502: Bad Gateway"
-        assert result["status_code"] == 502
+        with pytest.raises(ToolError) as exc_info:
+            await watsonx_client.delete("/v2/engines/non-json-error")
+        assert "HTTP 502" in str(exc_info.value)

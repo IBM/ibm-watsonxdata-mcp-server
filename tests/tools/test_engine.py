@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.engine.list_engines import list_engines
 
@@ -152,12 +153,8 @@ class TestListEngines:
     @pytest.mark.asyncio
     async def test_list_engines_invalid_type(self, mock_context):
         """Test listing engines with invalid engine type."""
-        result = await list_engines(mock_context, engine_type="flink")
-
-        assert result.get("error") is True
-        assert "Invalid engine_type: flink" in result.get("error_message", "")
-        assert "Must be 'presto', 'prestissimo', 'spark', or None" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await list_engines(mock_context, engine_type="flink")
 
     @pytest.mark.asyncio
     async def test_list_engines_empty_response(self, mock_context, watsonx_client, respx_mock):
@@ -187,11 +184,8 @@ class TestListEngines:
             return_value=httpx.Response(200, json=mock_spark_engines_response)
         )
 
-        result = await list_engines(mock_context)
-        
-        assert result["error"] is True
-        assert "Internal error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError):
+            await list_engines(mock_context)
 
     @pytest.mark.asyncio
     async def test_list_engines_spark_api_error(self, mock_context, watsonx_client, respx_mock, mock_presto_engines_response):
@@ -206,11 +200,8 @@ class TestListEngines:
             return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        result = await list_engines(mock_context)
-        
-        assert result["error"] is True
-        assert "Internal error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError):
+            await list_engines(mock_context)
 
     @pytest.mark.asyncio
     async def test_list_engines_timeout(self, mock_context, watsonx_client, respx_mock):
@@ -336,11 +327,8 @@ class TestRestartPrestoEngine:
             return_value=httpx.Response(404, json={"message": "Engine not found"})
         )
 
-        result = await restart_presto_engine(mock_context, engine_id="invalid")
-        
-        assert result["error"] is True
-        assert "Engine not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await restart_presto_engine(mock_context, engine_id="invalid")
 
 
 class TestPausePrestoEngine:
@@ -377,11 +365,8 @@ class TestPausePrestoEngine:
             return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        result = await pause_presto_engine(mock_context, engine_id="presto-01")
-        
-        assert result["error"] is True
-        assert "Internal error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError):
+            await pause_presto_engine(mock_context, engine_id="presto-01")
 
 
 class TestResumePrestoEngine:
@@ -416,11 +401,8 @@ class TestResumePrestoEngine:
             return_value=httpx.Response(500, json={"message": "Internal error"})
         )
 
-        result = await resume_presto_engine(mock_context, engine_id="presto-01")
-        
-        assert result["error"] is True
-        assert "Internal error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError):
+            await resume_presto_engine(mock_context, engine_id="presto-01")
 
 
 class TestUpdatePrestoEngine:
@@ -633,15 +615,13 @@ class TestCreatePrestoEngine:
             }
         }
 
-        result = await create_presto_engine(
-            mock_context,
-            origin="native",
-            display_name="Invalid Autoscaling",
-            configuration=configuration
-        )
-
-        assert result["error"] is True
-        assert "type must be 'cpu' or 'memory'" in result["error_message"]
+        with pytest.raises(ToolError):
+            await create_presto_engine(
+                mock_context,
+                origin="native",
+                display_name="Invalid Autoscaling",
+                configuration=configuration
+            )
 
     @pytest.mark.asyncio
     async def test_create_presto_engine_autoscaling_invalid_target(self, mock_context, watsonx_client):
@@ -659,15 +639,13 @@ class TestCreatePrestoEngine:
             }
         }
 
-        result = await create_presto_engine(
-            mock_context,
-            origin="native",
-            display_name="Invalid Target",
-            configuration=configuration
-        )
-
-        assert result["error"] is True
-        assert "target must be an integer between 1 and 100" in result["error_message"]
+        with pytest.raises(ToolError):
+            await create_presto_engine(
+                mock_context,
+                origin="native",
+                display_name="Invalid Target",
+                configuration=configuration
+            )
 
     @pytest.mark.asyncio
     async def test_create_presto_engine_autoscaling_min_greater_than_max(self, mock_context, watsonx_client):
@@ -687,16 +665,13 @@ class TestCreatePrestoEngine:
             }
         }
 
-        result = await create_presto_engine(
-            mock_context,
-            origin="native",
-            display_name="Invalid Min/Max",
-            configuration=configuration
-        )
-
-        assert result["error"] is True
-        assert "min_worker_quantity" in result["error_message"]
-        assert "cannot be greater than max_worker_quantity" in result["error_message"]
+        with pytest.raises(ToolError):
+            await create_presto_engine(
+                mock_context,
+                origin="native",
+                display_name="Invalid Min/Max",
+                configuration=configuration
+            )
 
 class TestScalePrestoEngine:
     """Tests for scale_presto_engine tool."""
@@ -1083,16 +1058,12 @@ class TestScaleSparkEngine:
         from lakehouse_mcp.tools.engine.scale_spark_engine import scale_spark_engine
 
         # Test too low
-        result = await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=0)
-        assert result.get("error") is True
-        assert "must be between 1 and 1000" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=0)
 
         # Test too high
-        result = await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=1001)
-        assert result.get("error") is True
-        assert "must be between 1 and 1000" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await scale_spark_engine(mock_context, engine_id="spark-01", number_of_nodes=1001)
 
 
 class TestRestartPrestissimoEngine:
@@ -1123,11 +1094,8 @@ class TestRestartPrestissimoEngine:
             return_value=httpx.Response(404, json={"message": "Engine not found"})
         )
 
-        result = await restart_prestissimo_engine(mock_context, engine_id="invalid")
-        
-        assert result["error"] is True
-        assert "Engine not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await restart_prestissimo_engine(mock_context, engine_id="invalid")
 
 
 class TestPausePrestissimoEngine:

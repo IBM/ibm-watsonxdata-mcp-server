@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -130,15 +131,6 @@ async def submit_spark_application(
 
     path = f"/v3/spark_engines/{quote(engine_id, safe='')}/applications"
     response = await watsonx_client.post(path, body)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("submit_spark_application_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     logger.info(
         "spark_application_submitted",

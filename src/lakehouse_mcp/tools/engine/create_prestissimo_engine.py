@@ -9,6 +9,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 from typing import Any
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -80,54 +81,26 @@ async def create_prestissimo_engine(
 
     # Validate configuration structure
     if "size_config" not in configuration:
-        return {
-            "error": True,
-            "error_message": "configuration must include 'size_config'",
-            "status_code": 400,
-        }
+        raise ToolError("configuration must include 'size_config'")
     if "coordinator" not in configuration:
-        return {
-            "error": True,
-            "error_message": "configuration must include 'coordinator' with 'node_type' and 'quantity'",
-            "status_code": 400,
-        }
+        raise ToolError("configuration must include 'coordinator' with 'node_type' and 'quantity'")
     if "worker" not in configuration:
-        return {
-            "error": True,
-            "error_message": "configuration must include 'worker' with 'node_type' and 'quantity'",
-            "status_code": 400,
-        }
+        raise ToolError("configuration must include 'worker' with 'node_type' and 'quantity'")
 
     # Validate coordinator
     coordinator = configuration.get("coordinator", {})
     if "node_type" not in coordinator or "quantity" not in coordinator:
-        return {
-            "error": True,
-            "error_message": "coordinator must have 'node_type' and 'quantity'",
-            "status_code": 400,
-        }
+        raise ToolError("coordinator must have 'node_type' and 'quantity'")
     if coordinator["quantity"] != 1:
-        return {
-            "error": True,
-            "error_message": f"coordinator quantity must be 1 for Prestissimo, got {coordinator['quantity']}",
-            "status_code": 400,
-        }
+        raise ToolError(f"coordinator quantity must be 1 for Prestissimo, got {coordinator['quantity']}")
 
     # Validate worker
     worker = configuration.get("worker", {})
     if "node_type" not in worker or "quantity" not in worker:
-        return {
-            "error": True,
-            "error_message": "worker must have 'node_type' and 'quantity'",
-            "status_code": 400,
-        }
+        raise ToolError("worker must have 'node_type' and 'quantity'")
     worker_qty = worker["quantity"]
     if worker_qty < 1 or worker_qty > 50:
-        return {
-            "error": True,
-            "error_message": f"worker quantity must be between 1 and 50 (1-18 recommended), got {worker_qty}",
-            "status_code": 400,
-        }
+        raise ToolError(f"worker quantity must be between 1 and 50 (1-18 recommended), got {worker_qty}")
 
     # Note: Node type validation removed - API accepts various node types depending on environment
     # Common types: "starter", "cache_optimized", but others may be available
@@ -151,15 +124,6 @@ async def create_prestissimo_engine(
 
     path = "/v3/prestissimo_engines"
     response = await watsonx_client.post(path, body)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("create_prestissimo_engine_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     logger.info("prestissimo_engine_created", engine_id=response.get("id"))
 
