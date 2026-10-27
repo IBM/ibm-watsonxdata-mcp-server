@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -51,19 +52,11 @@ async def execute_select(
     # Validate query is a SELECT statement
     sql_trimmed = sql.strip().upper()
     if not sql_trimmed.startswith("SELECT"):
-        return {
-            "error": True,
-            "error_message": "Only SELECT queries are allowed. Query must start with SELECT keyword.",
-            "status_code": 400,
-        }
+        raise ToolError("Only SELECT queries are allowed. Query must start with SELECT keyword.")
 
     # Check for unsafe operations (semicolon-separated statements, etc.)
     if ";" in sql.rstrip(";"):
-        return {
-            "error": True,
-            "error_message": "Multiple statements not allowed. Query must be a single SELECT statement.",
-            "status_code": 400,
-        }
+        raise ToolError("Multiple statements not allowed. Query must be a single SELECT statement.")
 
     # Apply limit if not present in query
     # Default to 500 if no limit specified to prevent large result sets
@@ -71,11 +64,7 @@ async def execute_select(
     if "LIMIT" not in sql_trimmed:
         if limit is not None:
             if not isinstance(limit, int) or limit < 1 or limit > 10000:
-                return {
-                    "error": True,
-                    "error_message": "limit must be an integer between 1 and 10000",
-                    "status_code": 400,
-                }
+                raise ToolError("limit must be an integer between 1 and 10000")
             applied_limit = int(limit)
         else:
             applied_limit = 500
@@ -111,15 +100,6 @@ async def execute_select(
     # Handle None response
     response = response or {}
 
-    # Check for HTTP-level API errors (not query execution errors)
-    # HTTP errors have status_code key, query errors are in response.data.stats.state
-    if response.get("error") and "status_code" in response:
-        logger.error("execute_select_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     # Response is nested under "data" key
     data = response.get("data", {}) or {}
@@ -168,30 +148,18 @@ async def execute_select(
 
         # Check for error states
         if state == "FAILED":
-            error = response.get("error", {}) or {}
+            error = response.get("error", {}) or {}  # API query-level error field, not a transport error
             error_message = error.get("message", "Unknown error")
             logger.error("query_failed", query_id=query_id, error=error_message)
-            return {
-                "error": True,
-                "error_message": f"Query failed: {error_message}",
-                "status_code": 0,
-            }
+            raise ToolError(f"Query failed: {error_message}")
 
         if state == "CANCELED":
             logger.error("query_canceled", query_id=query_id)
-            return {
-                "error": True,
-                "error_message": "Query was canceled",
-                "status_code": 0,
-            }
+            raise ToolError("Query was canceled")
 
         if elapsed_time >= max_wait_time:
             logger.error("query_timeout", query_id=query_id, elapsed_time=elapsed_time)
-            return {
-                "error": True,
-                "error_message": f"Query {query_id} did not complete within {max_wait_time} seconds",
-                "status_code": 0,
-            }
+            raise ToolError(f"Query {query_id} did not complete within {max_wait_time} seconds")
 
         # Wait before polling
         await asyncio.sleep(poll_interval)
@@ -209,15 +177,6 @@ async def execute_select(
         response = await watsonx_client.post(path, poll_request_body)
         response = response or {}
 
-        # Check for API errors during polling
-        if response.get("error"):
-            logger.error("execute_select_polling_failed", error=response.get("error_message"))
-            return {
-                "error": True,
-                "error_message": response.get("error_message", "Unknown error"),
-                "status_code": response.get("status_code", 0),
-            }
-
         data = response.get("data", {}) or {}
 
         # Update state
@@ -233,11 +192,7 @@ async def execute_select(
             empty_response_count += 1
             if empty_response_count >= 3:
                 logger.error("query_empty_responses", query_id=query_id, count=empty_response_count)
-                return {
-                    "error": True,
-                    "error_message": f"Query execution failed: received multiple empty responses. Query ID: {query_id}",
-                    "status_code": 0,
-                }
+                raise ToolError(f"Query execution failed: received multiple empty responses. Query ID: {query_id}")
         else:
             empty_response_count = 0
 

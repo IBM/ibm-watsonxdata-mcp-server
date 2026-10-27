@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -62,24 +63,7 @@ async def rename_column(
 
     # Make API call
     response = await watsonx_client.patch(path, body)
-    
-    # Check for API errors
-    if response.get("error"):
-        logger.error(
-            "column_rename_failed",
-            catalog_name=catalog_name,
-            schema_name=schema_name,
-            table_name=table_name,
-            column_name=column_name,
-            new_column_name=new_column_name,
-            error=response.get("error_message"),
-        )
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
-    
+
     logger.info(
         "column_renamed",
         catalog_name=catalog_name,

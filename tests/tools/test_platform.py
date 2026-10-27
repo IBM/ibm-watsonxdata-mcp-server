@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.platform.get_instance_details import get_instance_details
 
@@ -87,11 +88,8 @@ class TestGetInstanceDetails:
             return_value=httpx.Response(500, json={"message": "Internal server error"})
         )
 
-        result = await get_instance_details(mock_context)
-        
-        assert result["error"] is True
-        assert "Internal server error" in result["error_message"]
-        assert result["status_code"] == 500
+        with pytest.raises(ToolError):
+            await get_instance_details(mock_context)
 
     @pytest.mark.asyncio
     async def test_get_instance_details_not_found(self, mock_context, watsonx_client, respx_mock):
@@ -100,11 +98,8 @@ class TestGetInstanceDetails:
             return_value=httpx.Response(404, json={"message": "Instance not found"})
         )
 
-        result = await get_instance_details(mock_context)
-        
-        assert result["error"] is True
-        assert "Instance not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await get_instance_details(mock_context)
 
     @pytest.mark.asyncio
     async def test_get_instance_details_sends_iam_token_header(self, mock_context, watsonx_client, respx_mock, mock_instance_response):

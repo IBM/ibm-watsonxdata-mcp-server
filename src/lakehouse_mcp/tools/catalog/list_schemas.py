@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -51,15 +52,6 @@ async def list_schemas(
 
     # Handle None response
     response = response or {}
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("list_schemas_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     # Log raw response for debugging
     logger.debug("raw_api_response", response_keys=list(response.keys()))

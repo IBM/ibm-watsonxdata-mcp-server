@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.spark_applications.get_spark_application_status import get_spark_application_status
 from lakehouse_mcp.tools.spark_applications.list_spark_applications import list_spark_applications
@@ -289,15 +290,12 @@ class TestListSparkApplications:
         respx_mock,
     ):
         """Test listing Spark applications with limit below valid range."""
-        result = await list_spark_applications(
-            mock_context,
-            engine_id="spark-01",
-            limit=0,
-        )
-
-        assert result["error"] is True
-        assert "limit must be between 1 and 1000" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await list_spark_applications(
+                mock_context,
+                engine_id="spark-01",
+                limit=0,
+            )
 
     @pytest.mark.asyncio
     async def test_list_applications_invalid_limit_too_high(
@@ -307,15 +305,12 @@ class TestListSparkApplications:
         respx_mock,
     ):
         """Test listing Spark applications with limit above valid range."""
-        result = await list_spark_applications(
-            mock_context,
-            engine_id="spark-01",
-            limit=1001,
-        )
-
-        assert result["error"] is True
-        assert "limit must be between 1 and 1000" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await list_spark_applications(
+                mock_context,
+                engine_id="spark-01",
+                limit=1001,
+            )
 
 
 class TestGetSparkApplicationStatus:
@@ -486,12 +481,9 @@ class TestStopSparkApplication:
             return_value=httpx.Response(404, json={"message": "Application not found"})
         )
 
-        result = await stop_spark_application(
-            mock_context,
-            engine_id="spark-01",
-            application_id="app-nonexistent",
-        )
-        
-        assert result["error"] is True
-        assert "Application not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await stop_spark_application(
+                mock_context,
+                engine_id="spark-01",
+                application_id="app-nonexistent",
+            )

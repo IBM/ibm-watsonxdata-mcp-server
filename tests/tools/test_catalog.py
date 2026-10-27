@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.catalog.describe_table import describe_table
 from lakehouse_mcp.tools.catalog.list_schemas import list_schemas
@@ -139,16 +140,13 @@ class TestListTables:
             return_value=httpx.Response(404, json={"message": "Schema not found"})
         )
 
-        result = await list_tables(
-            mock_context,
-            catalog_name="invalid",
-            schema_name="invalid",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Schema not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await list_tables(
+                mock_context,
+                catalog_name="invalid",
+                schema_name="invalid",
+                engine_id="presto-01",
+            )
 
 
 class TestDescribeTable:
@@ -236,17 +234,14 @@ class TestDescribeTable:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
         ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        result = await describe_table(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="nonexistent",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Table not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await describe_table(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                engine_id="presto-01",
+            )
 
 
 class TestCreateSchema:
@@ -333,17 +328,14 @@ class TestCreateSchema:
             return_value=httpx.Response(409, json={"message": "Schema already exists"})
         )
 
-        result = await create_schema(
-            mock_context,
-            catalog_id="iceberg_data",
-            schema_name="existing_schema",
-            engine_id="presto-01",
-            custom_path="existing_schema",
-        )
-        
-        assert result["error"] is True
-        assert "Schema already exists" in result["error_message"]
-        assert result["status_code"] == 409
+        with pytest.raises(ToolError):
+            await create_schema(
+                mock_context,
+                catalog_id="iceberg_data",
+                schema_name="existing_schema",
+                engine_id="presto-01",
+                custom_path="existing_schema",
+            )
 
     @pytest.mark.asyncio
     async def test_create_schema_invalid_catalog(self, mock_context, watsonx_client, respx_mock):
@@ -352,17 +344,14 @@ class TestCreateSchema:
             return_value=httpx.Response(404, json={"message": "Catalog not found"})
         )
 
-        result = await create_schema(
-            mock_context,
-            catalog_id="invalid_catalog",
-            schema_name="new_schema",
-            engine_id="presto-01",
-            custom_path="new_schema",
-        )
-        
-        assert result["error"] is True
-        assert "Catalog not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await create_schema(
+                mock_context,
+                catalog_id="invalid_catalog",
+                schema_name="new_schema",
+                engine_id="presto-01",
+                custom_path="new_schema",
+            )
         
 
 
@@ -406,18 +395,15 @@ class TestRenameTable:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent?engine_id=presto-01"
         ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        result = await rename_table(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="nonexistent",
-            new_table_name="new_name",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Table not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await rename_table(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                new_table_name="new_name",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_rename_table_name_conflict(self, mock_context, watsonx_client, respx_mock):
@@ -428,18 +414,15 @@ class TestRenameTable:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers?engine_id=presto-01"
         ).mock(return_value=httpx.Response(409, json={"message": "Table name already exists"}))
 
-        result = await rename_table(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="customers",
-            new_table_name="orders",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Table name already exists" in result["error_message"]
-        assert result["status_code"] == 409
+        with pytest.raises(ToolError):
+            await rename_table(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                new_table_name="orders",
+                engine_id="presto-01",
+            )
 
 
 class TestAddColumns:
@@ -575,18 +558,15 @@ class TestAddColumns:
 
         columns = [{"name": "new_col", "type": "string"}]
 
-        result = await add_columns(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="nonexistent",
-            columns=columns,
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Table not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await add_columns(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                columns=columns,
+                engine_id="presto-01",
+            )
 
 
 class TestRenameColumn:
@@ -628,19 +608,16 @@ class TestRenameColumn:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/nonexistent?engine_id=presto-01"
         ).mock(return_value=httpx.Response(404, json={"message": "Column not found"}))
 
-        result = await rename_column(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="customers",
-            column_name="nonexistent",
-            new_column_name="new_name",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Column not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await rename_column(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                column_name="nonexistent",
+                new_column_name="new_name",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_rename_column_name_conflict(self, mock_context, watsonx_client, respx_mock):
@@ -651,19 +628,16 @@ class TestRenameColumn:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/customers/columns/email?engine_id=presto-01"
         ).mock(return_value=httpx.Response(409, json={"message": "Column name already exists"}))
 
-        result = await rename_column(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="customers",
-            column_name="email",
-            new_column_name="id",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Column name already exists" in result["error_message"]
-        assert result["status_code"] == 409
+        with pytest.raises(ToolError):
+            await rename_column(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="customers",
+                column_name="email",
+                new_column_name="id",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_rename_column_table_not_found(self, mock_context, watsonx_client, respx_mock):
@@ -674,16 +648,13 @@ class TestRenameColumn:
             "https://test.watsonx.com/api/v3/catalogs/iceberg_data/schemas/sales_db/tables/nonexistent/columns/email?engine_id=presto-01"
         ).mock(return_value=httpx.Response(404, json={"message": "Table not found"}))
 
-        result = await rename_column(
-            mock_context,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            table_name="nonexistent",
-            column_name="email",
-            new_column_name="new_email",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Table not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await rename_column(
+                mock_context,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                table_name="nonexistent",
+                column_name="email",
+                new_column_name="new_email",
+                engine_id="presto-01",
+            )

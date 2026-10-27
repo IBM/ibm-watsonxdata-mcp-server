@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -59,23 +60,7 @@ async def rename_table(
 
     # Make API call
     response = await watsonx_client.patch(path, body)
-    
-    # Check for API errors
-    if response.get("error"):
-        logger.error(
-            "table_rename_failed",
-            catalog_name=catalog_name,
-            schema_name=schema_name,
-            table_name=table_name,
-            new_table_name=new_table_name,
-            error=response.get("error_message"),
-        )
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
-    
+
     logger.info(
         "table_renamed",
         catalog_name=catalog_name,

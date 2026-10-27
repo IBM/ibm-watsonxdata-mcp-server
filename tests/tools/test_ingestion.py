@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.ingestion.cancel_ingestion_job import cancel_ingestion_job
 from lakehouse_mcp.tools.ingestion.create_ingestion_job import create_ingestion_job
@@ -481,14 +482,11 @@ class TestCancelIngestionJob:
             return_value=httpx.Response(404, json={"message": "Ingestion job not found"})
         )
 
-        result = await cancel_ingestion_job(
-            mock_context,
-            job_id="job-nonexistent",
-        )
-        
-        assert result["error"] is True
-        assert "Ingestion job not found" in result["error_message"]
-        assert result["status_code"] == 404
+        with pytest.raises(ToolError):
+            await cancel_ingestion_job(
+                mock_context,
+                job_id="job-nonexistent",
+            )
 
     @pytest.mark.asyncio
     async def test_cancel_completed_job(

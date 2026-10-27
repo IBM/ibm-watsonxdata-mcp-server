@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -44,11 +45,7 @@ async def list_spark_applications(
         query_params.append(f"state={state_param}")
     if limit is not None:
         if limit < 1 or limit > 1000:
-            return {
-                "error": True,
-                "error_message": f"limit must be between 1 and 1000, got {limit}",
-                "status_code": 400,
-            }
+            raise ToolError(f"limit must be between 1 and 1000, got {limit}")
         query_params.append(f"limit={limit}")
     
     # Build path with query parameters
@@ -63,15 +60,6 @@ async def list_spark_applications(
     )
 
     response = await watsonx_client.get(path)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("list_spark_applications_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     application_count = len(response.get("applications", []))
     logger.info(

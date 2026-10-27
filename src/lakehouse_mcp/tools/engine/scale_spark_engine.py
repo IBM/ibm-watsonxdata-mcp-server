@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -38,11 +39,7 @@ async def scale_spark_engine(
 
     # Validate number_of_nodes
     if number_of_nodes < 1 or number_of_nodes > 1000:
-        return {
-            "error": True,
-            "error_message": f"number_of_nodes must be between 1 and 1000, got {number_of_nodes}",
-            "status_code": 400,
-        }
+        raise ToolError(f"number_of_nodes must be between 1 and 1000, got {number_of_nodes}")
 
     # Build request body
     body = {"number_of_nodes": number_of_nodes}
@@ -50,15 +47,6 @@ async def scale_spark_engine(
     # Scale the engine
     path = f"/v3/spark_engines/{quote(engine_id, safe='')}/scale"
     response = await watsonx_client.post(path, body)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("scale_spark_engine_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     logger.info(
         "spark_engine_scaled",

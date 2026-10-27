@@ -6,6 +6,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 
 import httpx
 import pytest
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.tools.query.execute_insert import execute_insert
 from lakehouse_mcp.tools.query.execute_select import execute_select
@@ -155,34 +156,28 @@ class TestExecuteSelect:
         ]
 
         for query in invalid_queries:
-            result = await execute_select(
-                mock_context,
-                sql=query,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
-
-            assert result.get("error") is True
-            assert "Only SELECT queries are allowed" in result.get("error_message", "")
-            assert result.get("status_code") == 400
+            with pytest.raises(ToolError):
+                await execute_select(
+                    mock_context,
+                    sql=query,
+                    catalog_name="iceberg_data",
+                    schema_name="sales_db",
+                    engine_id="presto-01",
+                )
 
     @pytest.mark.asyncio
     async def test_execute_select_multiple_statements_rejected(self, mock_context):
         """Test that multiple statements are rejected."""
         query = "SELECT * FROM customers; DROP TABLE customers;"
 
-        result = await execute_select(
-            mock_context,
-            sql=query,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result.get("error") is True
-        assert "Multiple statements not allowed" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await execute_select(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_select_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -526,17 +521,14 @@ class TestExecuteSelect:
             return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        result = await execute_select(
-            mock_context,
-            sql="SELECT * FROM nonexistent_table",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Syntax error in query" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await execute_select(
+                mock_context,
+                sql="SELECT * FROM nonexistent_table",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_select_engine_not_running(self, mock_context, watsonx_client, respx_mock):
@@ -545,17 +537,14 @@ class TestExecuteSelect:
             return_value=httpx.Response(400, json={"message": "Engine presto-01 is not running"})
         )
 
-        result = await execute_select(
-            mock_context,
-            sql="SELECT 1",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-        
-        assert result["error"] is True
-        assert "Engine presto-01 is not running" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await execute_select(
+                mock_context,
+                sql="SELECT 1",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_select_timeout(self, mock_context, watsonx_client, respx_mock):
@@ -621,17 +610,14 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        result = await execute_select(
-            mock_context,
-            sql="SELECT * FROM nonexistent",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "Query failed" in result["error_message"]
-        assert "Table does not exist" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_select(
+                mock_context,
+                sql="SELECT * FROM nonexistent",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_select_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -648,16 +634,14 @@ class TestExecuteSelect:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        result = await execute_select(
-            mock_context,
-            sql="SELECT * FROM customers",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "Query was canceled" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_select(
+                mock_context,
+                sql="SELECT * FROM customers",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
 
 
@@ -707,34 +691,28 @@ class TestExecuteInsert:
         ]
 
         for query in invalid_queries:
-            result = await execute_insert(
-                mock_context,
-                sql=query,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
-
-            assert result.get("error") is True
-            assert "Only INSERT queries are allowed" in result.get("error_message", "")
-            assert result.get("status_code") == 400
+            with pytest.raises(ToolError):
+                await execute_insert(
+                    mock_context,
+                    sql=query,
+                    catalog_name="iceberg_data",
+                    schema_name="sales_db",
+                    engine_id="presto-01",
+                )
 
     @pytest.mark.asyncio
     async def test_execute_insert_multiple_statements_rejected(self, mock_context):
         """Test that multiple statements are rejected."""
         query = "INSERT INTO customers VALUES (1, 'test'); DROP TABLE customers;"
 
-        result = await execute_insert(
-            mock_context,
-            sql=query,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result.get("error") is True
-        assert "Multiple statements not allowed" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await execute_insert(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_insert_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -795,17 +773,14 @@ class TestExecuteInsert:
     @pytest.mark.asyncio
     async def test_execute_insert_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
-        result = await execute_insert(
-            mock_context,
-            sql="",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result.get("error") is True
-        assert "SQL query cannot be empty" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await execute_insert(
+                mock_context,
+                sql="",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_insert_polling_through_states(self, mock_context, watsonx_client, respx_mock):
@@ -860,17 +835,14 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        result = await execute_insert(
-            mock_context,
-            sql="INSERT INTO nonexistent VALUES (1, 'test')",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "INSERT query failed" in result["error_message"]
-        assert "Table does not exist" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_insert(
+                mock_context,
+                sql="INSERT INTO nonexistent VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_insert_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -887,16 +859,14 @@ class TestExecuteInsert:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        result = await execute_insert(
-            mock_context,
-            sql="INSERT INTO customers VALUES (1, 'test')",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "INSERT query was canceled" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_insert(
+                mock_context,
+                sql="INSERT INTO customers VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_insert_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -905,17 +875,14 @@ class TestExecuteInsert:
             return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        result = await execute_insert(
-            mock_context,
-            sql="INSERT INTO customers VALUES (1, 'test')",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "Syntax error in query" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await execute_insert(
+                mock_context,
+                sql="INSERT INTO customers VALUES (1, 'test')",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
 
 class TestExecuteUpdate:
@@ -964,34 +931,28 @@ class TestExecuteUpdate:
         ]
 
         for query in invalid_queries:
-            result = await execute_update(
-                mock_context,
-                sql=query,
-                catalog_name="iceberg_data",
-                schema_name="sales_db",
-                engine_id="presto-01",
-            )
-
-            assert result.get("error") is True
-            assert "Only UPDATE queries are allowed" in result.get("error_message", "")
-            assert result.get("status_code") == 400
+            with pytest.raises(ToolError):
+                await execute_update(
+                    mock_context,
+                    sql=query,
+                    catalog_name="iceberg_data",
+                    schema_name="sales_db",
+                    engine_id="presto-01",
+                )
 
     @pytest.mark.asyncio
     async def test_execute_update_multiple_statements_rejected(self, mock_context):
         """Test that multiple statements are rejected."""
         query = "UPDATE customers SET name = 'test'; DROP TABLE customers;"
 
-        result = await execute_update(
-            mock_context,
-            sql=query,
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result.get("error") is True
-        assert "Multiple statements not allowed" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await execute_update(
+                mock_context,
+                sql=query,
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_update_trailing_semicolon_allowed(self, mock_context, watsonx_client, respx_mock):
@@ -1052,17 +1013,14 @@ class TestExecuteUpdate:
     @pytest.mark.asyncio
     async def test_execute_update_empty_query(self, mock_context):
         """Test that empty queries are rejected."""
-        result = await execute_update(
-            mock_context,
-            sql="",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result.get("error") is True
-        assert "SQL query cannot be empty" in result.get("error_message", "")
-        assert result.get("status_code") == 400
+        with pytest.raises(ToolError):
+            await execute_update(
+                mock_context,
+                sql="",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_update_polling_through_states(self, mock_context, watsonx_client, respx_mock):
@@ -1117,17 +1075,14 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=failed_response)
         )
 
-        result = await execute_update(
-            mock_context,
-            sql="UPDATE customers SET nonexistent_column = 'test'",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "UPDATE query failed" in result["error_message"]
-        assert "Column does not exist" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_update(
+                mock_context,
+                sql="UPDATE customers SET nonexistent_column = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_update_query_canceled_state(self, mock_context, watsonx_client, respx_mock):
@@ -1144,16 +1099,14 @@ class TestExecuteUpdate:
             return_value=httpx.Response(200, json=canceled_response)
         )
 
-        result = await execute_update(
-            mock_context,
-            sql="UPDATE customers SET name = 'test'",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "UPDATE query was canceled" in result["error_message"]
+        with pytest.raises(ToolError):
+            await execute_update(
+                mock_context,
+                sql="UPDATE customers SET name = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_update_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -1162,17 +1115,14 @@ class TestExecuteUpdate:
             return_value=httpx.Response(400, json={"message": "Syntax error in query"})
         )
 
-        result = await execute_update(
-            mock_context,
-            sql="UPDATE customers SET name = 'test'",
-            catalog_name="iceberg_data",
-            schema_name="sales_db",
-            engine_id="presto-01",
-        )
-
-        assert result["error"] is True
-        assert "Syntax error in query" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await execute_update(
+                mock_context,
+                sql="UPDATE customers SET name = 'test'",
+                catalog_name="iceberg_data",
+                schema_name="sales_db",
+                engine_id="presto-01",
+            )
 
     @pytest.mark.asyncio
     async def test_execute_update_zero_rows_updated(self, mock_context, watsonx_client, respx_mock):
@@ -1311,17 +1261,13 @@ class TestExplainQuery:
         """Test that invalid engine type is rejected."""
         from lakehouse_mcp.tools.query.explain_query import explain_query
 
-        result = await explain_query(
-            mock_context,
-            engine_id="spark-01",
-            statement="SELECT * FROM customers",
-            engine_type="spark",  # Invalid - only presto/prestissimo supported
-        )
-
-        assert result["error"] is True
-        assert "Invalid engine_type" in result["error_message"]
-        assert "Must be 'presto' or 'prestissimo'" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await explain_query(
+                mock_context,
+                engine_id="spark-01",
+                statement="SELECT * FROM customers",
+                engine_type="spark",  # Invalid - only presto/prestissimo supported
+            )
 
     @pytest.mark.asyncio
     async def test_explain_query_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -1332,16 +1278,13 @@ class TestExplainQuery:
             return_value=httpx.Response(400, json={"message": "Invalid SQL syntax"})
         )
 
-        result = await explain_query(
-            mock_context,
-            engine_id="presto-01",
-            statement="SELECT * FORM customers",  # Typo: FORM instead of FROM
-            engine_type="presto",
-        )
-        
-        assert result["error"] is True
-        assert "Invalid SQL syntax" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await explain_query(
+                mock_context,
+                engine_id="presto-01",
+                statement="SELECT * FORM customers",  # Typo: FORM instead of FROM
+                engine_type="presto",
+            )
 
 
 class TestExplainAnalyzeQuery:
@@ -1427,17 +1370,13 @@ class TestExplainAnalyzeQuery:
         """Test that invalid engine type is rejected."""
         from lakehouse_mcp.tools.query.explain_analyze_query import explain_analyze_query
 
-        result = await explain_analyze_query(
-            mock_context,
-            engine_id="spark-01",
-            statement="SELECT * FROM customers",
-            engine_type="spark",  # Invalid - only presto/prestissimo supported
-        )
-
-        assert result["error"] is True
-        assert "Invalid engine_type" in result["error_message"]
-        assert "Must be 'presto' or 'prestissimo'" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await explain_analyze_query(
+                mock_context,
+                engine_id="spark-01",
+                statement="SELECT * FROM customers",
+                engine_type="spark",  # Invalid - only presto/prestissimo supported
+            )
 
     @pytest.mark.asyncio
     async def test_explain_analyze_query_api_error(self, mock_context, watsonx_client, respx_mock):
@@ -1448,13 +1387,10 @@ class TestExplainAnalyzeQuery:
             return_value=httpx.Response(400, json={"message": "Query execution failed"})
         )
 
-        result = await explain_analyze_query(
-            mock_context,
-            engine_id="presto-01",
-            statement="SELECT * FROM nonexistent_table",
-            engine_type="presto",
-        )
-        
-        assert result["error"] is True
-        assert "Query execution failed" in result["error_message"]
-        assert result["status_code"] == 400
+        with pytest.raises(ToolError):
+            await explain_analyze_query(
+                mock_context,
+                engine_id="presto-01",
+                statement="SELECT * FROM nonexistent_table",
+                engine_type="presto",
+            )

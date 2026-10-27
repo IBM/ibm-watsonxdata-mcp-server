@@ -9,6 +9,7 @@ This file has been modified with the assistance of IBM Bob AI tool
 from typing import Any
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -39,19 +40,11 @@ async def list_ingestion_jobs(
     
     if start is not None:
         if not isinstance(start, int) or start < 0:
-            return {
-                "error": True,
-                "error_message": "start must be a non-negative integer",
-                "status_code": 400,
-            }
+            raise ToolError("start must be a non-negative integer")
         query_params.append(f"start={int(start)}")
     if limit is not None:
         if not isinstance(limit, int) or (limit != -1 and (limit < 1 or limit > 100)):
-            return {
-                "error": True,
-                "error_message": "limit must be -1 (all) or an integer between 1 and 100",
-                "status_code": 400,
-            }
+            raise ToolError("limit must be -1 (all) or an integer between 1 and 100")
         query_params.append(f"limit={int(limit)}")
     
     if query_params:
@@ -64,15 +57,6 @@ async def list_ingestion_jobs(
     )
 
     response = await watsonx_client.get(path)
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("list_ingestion_jobs_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     job_count = len(response.get("ingestion_jobs", []))
     logger.info(

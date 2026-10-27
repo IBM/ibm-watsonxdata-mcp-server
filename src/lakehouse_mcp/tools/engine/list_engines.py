@@ -10,6 +10,7 @@ import asyncio
 from typing import Any
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -34,11 +35,7 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
 
     # Validate engine_type
     if engine_type and engine_type not in ("presto", "prestissimo", "spark"):
-        return {
-            "error": True,
-            "error_message": f"Invalid engine_type: {engine_type}. Must be 'presto', 'prestissimo', 'spark', or None",
-            "status_code": 400,
-        }
+        raise ToolError(f"Invalid engine_type: {engine_type}. Must be 'presto', 'prestissimo', 'spark', or None")
 
     logger.info("listing_engines", engine_type=engine_type)
 
@@ -66,31 +63,6 @@ async def list_engines(ctx: Context, engine_type: str | None = None) -> dict[str
 
     # Execute in parallel
     presto_response, prestissimo_response, spark_response = await asyncio.gather(*tasks)
-
-    # Check for API errors in responses
-    if should_fetch_presto and (presto_response or {}).get("error"):
-        logger.error("list_engines_presto_failed", error=presto_response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": presto_response.get("error_message", "Unknown error"),
-            "status_code": presto_response.get("status_code", 0),
-        }
-    
-    if should_fetch_prestissimo and (prestissimo_response or {}).get("error"):
-        logger.error("list_engines_prestissimo_failed", error=prestissimo_response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": prestissimo_response.get("error_message", "Unknown error"),
-            "status_code": prestissimo_response.get("status_code", 0),
-        }
-    
-    if should_fetch_spark and (spark_response or {}).get("error"):
-        logger.error("list_engines_spark_failed", error=spark_response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": spark_response.get("error_message", "Unknown error"),
-            "status_code": spark_response.get("status_code", 0),
-        }
 
     # Extract engine lists (handle different response structures)
     # Handle None responses from API

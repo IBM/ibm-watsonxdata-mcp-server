@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from fastmcp import Context
+from fastmcp.exceptions import ToolError
 
 from lakehouse_mcp.observability import get_logger
 from lakehouse_mcp.server import mcp
@@ -34,15 +35,6 @@ async def pause_prestissimo_engine(ctx: Context, engine_id: str) -> dict[str, An
     # Pause the engine (empty POST request)
     path = f"/v3/prestissimo_engines/{quote(engine_id, safe='')}/pause"
     response = await watsonx_client.post(path, {})
-
-    # Check for API errors
-    if response.get("error"):
-        logger.error("pause_prestissimo_engine_failed", error=response.get("error_message"))
-        return {
-            "error": True,
-            "error_message": response.get("error_message", "Unknown error"),
-            "status_code": response.get("status_code", 0),
-        }
 
     # Build result from API response
     result = {
