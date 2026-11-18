@@ -1,6 +1,6 @@
 [project]
 name = "ibm-watsonxdata-mcp-server"
-version = "0.1.4"
+version = "0.1.5"
 description = "Model Context Protocol (MCP) server for IBM watsonx.data - enables AI assistants to query and explore lakehouse data"
 readme = "README.md"
 requires-python = ">=3.11"
