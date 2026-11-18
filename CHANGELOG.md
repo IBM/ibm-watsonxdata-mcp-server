@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-18
+
+### Added
+- `get_instance_details` now includes the instance name in its response
+
+### Changed
+- **Breaking:** Errors are now raised as FastMCP `ToolError` instead of being returned as error dictionaries
+  - Applies to the watsonx.data API client (GET, POST, PATCH, DELETE) and all catalog, engine, ingestion, platform, query and Spark application tools
+  - Query validation failures, failed/canceled queries and invalid parameters now raise `ToolError` (this reverses the 0.1.4 behavior)
+- Upgraded to FastMCP 4.1.x (from 3.x) and MCP >= 1.30.0
+- Added `uvicorn` as a dependency for SSL support
+- `cancel_ingestion_job` now uses the `/v3/lhingestion/api/v1/ingestion/jobs/{job_id}` endpoint, and documentation clarifies cancellation vs deletion
+
+### Fixed
+- Empty API responses (e.g. `204 No Content`) are now treated as success in the client
+- `explain_analyze_query` is restricted to `SELECT` queries only
+
+### Security
+- Percent-encode dynamic path segments to prevent URL/path injection
+- Sanitize query parameters in list and select tools to prevent injection
+- Dependency upgrades to resolve known vulnerabilities:
+  - `dnspython` 2.8.0 -> 2.9.2 (CVE-2026-128089)
+  - `joserfc` 1.6.4 -> 1.8.0 (CVE-2026-119283, CVE-2026-119284)
+  - `opentelemetry-api` / `opentelemetry-sdk` 1.40.0 -> 1.45.2 (CVE-2026-126360)
+  - `authlib` 1.7.2 -> 1.9.1, `cryptography` 46.0.7 -> 50.0.0, `anyio` 4.13.0 -> 4.15.1
+  - `certifi`, `click`, `idna`, `filelock`, `starlette`, `python-multipart`, `urllib3`, `pyjwt`, `virtualenv`
+
 ## [0.1.4] - 2026-05-18
 
 ### Added
